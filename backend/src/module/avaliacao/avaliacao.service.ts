@@ -6,8 +6,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Avaliacao } from '../../config/database/entities/avaliacao.entity';
-import { PontoTuristico } from '../../config/database/entities/ponto-turistico.entity';
+import { Avaliacao } from '../../shared/database/entities/avaliacao.entity';
+import { PontoTuristico } from '../../shared/database/entities/ponto-turistico.entity';
 import { CreateAvaliacaoDto } from './dto/create-avaliacao.dto';
 import { UpdateAvaliacaoDto } from './dto/update-avaliacao.dto';
 

@@ -3,26 +3,7 @@ import { HydratedDocument } from 'mongoose';
 
 export type ComentariosDocument = HydratedDocument<Comentarios>;
 
-class Metadata {
-  @Prop()
-  language: string;
-
-  @Prop()
-  device: string;
-}
-
-class Resposta {
-  @Prop()
-  usuarioId: string;
-
-  @Prop()
-  texto: string;
-
-  @Prop()
-  data: Date;
-}
-
-@Schema()
+@Schema({ timestamps: true })
 export class Comentarios {
   @Prop({ required: true })
   pontoId: string;
@@ -30,17 +11,14 @@ export class Comentarios {
   @Prop({ required: true })
   usuarioId: string;
 
-  @Prop({ required: true })
+  @Prop({ required: true, maxlength: 500 })
   texto: string;
 
   @Prop({ type: Date, default: Date.now })
   createdAt: Date;
 
-  @Prop({ type: Metadata })
-  metadata: Metadata;
-
-  @Prop({ type: [Resposta], default: [] })
-  respostas: Resposta[];
+  @Prop({ type: Date, default: Date.now })
+  updatedAt: Date;
 }
 
 export const ComentariosSchema = SchemaFactory.createForClass(Comentarios);

@@ -23,7 +23,7 @@ import {
 import { PontoTuristicoService } from './ponto-turistico.service';
 import { CreatePontoTuristicoDto } from './dto/create-ponto-turistico.dto';
 import { UpdatePontoTuristicoDto } from './dto/update-ponto-turistico.dto';
-import { AuthGuard } from '../../config/auth/auth.guard';
+import { AuthGuard } from '../../shared/auth/auth.guard';
 
 @ApiTags('pontos-turisticos')
 @Controller('pontos-turisticos')
@@ -70,13 +70,7 @@ export class PontoTuristicoController {
     description: 'Filtrar por estado',
   })
   findAll(@Query('cidade') cidade?: string, @Query('estado') estado?: string) {
-    if (cidade) {
-      return this.pontoTuristicoService.findByCity(cidade);
-    }
-    if (estado) {
-      return this.pontoTuristicoService.findByState(estado);
-    }
-    return this.pontoTuristicoService.findAll();
+    return this.pontoTuristicoService.findAll({ cidade, estado });
   }
 
   @Get(':id')

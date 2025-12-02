@@ -4,8 +4,8 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { PontoTuristico } from '../../config/database/entities/ponto-turistico.entity';
+import { Not, Repository } from 'typeorm';
+import { PontoTuristico } from '../../shared/database/entities/ponto-turistico.entity';
 import { CreatePontoTuristicoDto } from './dto/create-ponto-turistico.dto';
 import { UpdatePontoTuristicoDto } from './dto/update-ponto-turistico.dto';
 
@@ -20,6 +20,11 @@ export class PontoTuristicoService {
     createPontoTuristicoDto: CreatePontoTuristicoDto,
     userId: string,
   ): Promise<PontoTuristico> {
+    await this.verificarSeExisteNomeDePontoNaCidade(
+      createPontoTuristicoDto.nome,
+      createPontoTuristicoDto.cidade,
+    );
+
     const novoPonto = this.pontoTuristicoRepository.create({
       ...createPontoTuristicoDto,
       criado_por: userId,
@@ -28,9 +33,29 @@ export class PontoTuristicoService {
     return await this.pontoTuristicoRepository.save(novoPonto);
   }
 
-  async findAll(): Promise<PontoTuristico[]> {
+  async findByNameAndCity(nome: string, cidade: string, excecao?: string) {
+    return await this.pontoTuristicoRepository.findOne({
+      where: {
+        id: Not(excecao!),
+        nome,
+        cidade,
+      },
+    });
+  }
+
+  async findAll({
+    cidade,
+    estado,
+  }: {
+    cidade?: string;
+    estado?: string;
+  }): Promise<PontoTuristico[]> {
     return await this.pontoTuristicoRepository.find({
       relations: ['criador'],
+      where: {
+        cidade,
+        estado,
+      },
       select: {
         criador: {
           id: true,
@@ -75,8 +100,28 @@ export class PontoTuristicoService {
       );
     }
 
+    if (updatePontoTuristicoDto.nome)
+      await this.verificarSeExisteNomeDePontoNaCidade(
+        updatePontoTuristicoDto.nome,
+        updatePontoTuristicoDto?.cidade ?? ponto?.cidade,
+        id,
+      );
+
     Object.assign(ponto, updatePontoTuristicoDto);
     return await this.pontoTuristicoRepository.save(ponto);
+  }
+
+  async verificarSeExisteNomeDePontoNaCidade(
+    nome: string,
+    cidade: string,
+    excecao?: string,
+  ) {
+    const pontoExistente = await this.findByNameAndCity(nome, cidade, excecao);
+    if (pontoExistente) {
+      throw new ForbiddenException(
+        'Já existe um ponto turístico com esse nome',
+      );
+    }
   }
 
   async remove(id: string, userId: string): Promise<void> {

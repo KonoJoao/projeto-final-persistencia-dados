@@ -20,28 +20,28 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
-import { AvaliacaoService } from './avaliacao.service';
-import { CreateAvaliacaoDto } from './dto/create-avaliacao.dto';
-import { UpdateAvaliacaoDto } from './dto/update-avaliacao.dto';
+import { ComentariosService } from './comentarios.service';
+import { CreateComentarioDto } from './dto/create-comentario.dto';
+import { UpdateComentarioDto } from './dto/update-comentario.dto';
 import { AuthGuard } from '../../shared/auth/auth.guard';
 
-@ApiTags('avaliacoes')
-@Controller('avaliacoes')
-export class AvaliacaoController {
-  constructor(private readonly avaliacaoService: AvaliacaoService) {}
+@ApiTags('comentarios')
+@Controller('comentarios')
+export class ComentariosController {
+  constructor(private readonly comentariosService: ComentariosService) {}
 
   @Post()
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Criar nova avaliação' })
+  @ApiOperation({ summary: 'Criar novo comentário' })
   @ApiResponse({
     status: 201,
-    description: 'Avaliação criada com sucesso',
+    description: 'Comentário criado com sucesso',
   })
   @ApiResponse({
     status: 400,
-    description: 'Usuário já avaliou este ponto turístico',
+    description: 'Comentário vazio ou muito longo',
   })
   @ApiResponse({
     status: 401,
@@ -52,17 +52,18 @@ export class AvaliacaoController {
     description: 'Ponto turístico não encontrado',
   })
   create(
-    @Body() createAvaliacaoDto: CreateAvaliacaoDto,
+    @Body() createComentarioDto: CreateComentarioDto,
     @Request() req: { user: { sub: string } },
   ) {
-    return this.avaliacaoService.create(createAvaliacaoDto, req.user.sub);
+    return this.comentariosService.create(createComentarioDto, req.user.sub);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Listar todas as avaliações' })
+  @ApiOperation({ summary: 'Listar todos os comentários' })
   @ApiResponse({
     status: 200,
-    description: 'Lista de avaliações',
+    description:
+      'Lista de comentários ordenados por data (mais recentes primeiro)',
   })
   @ApiQuery({
     name: 'pontoId',
@@ -79,16 +80,16 @@ export class AvaliacaoController {
     @Query('userId') userId?: string,
   ) {
     if (pontoId) {
-      return this.avaliacaoService.findByPontoTuristico(pontoId);
+      return this.comentariosService.findByPontoTuristico(pontoId);
     }
     if (userId) {
-      return this.avaliacaoService.findByUser(userId);
+      return this.comentariosService.findByUser(userId);
     }
-    return this.avaliacaoService.findAll();
+    return this.comentariosService.findAll();
   }
 
-  @Get('ponto/:pontoId/media')
-  @ApiOperation({ summary: 'Obter média de avaliações de um ponto turístico' })
+  @Get('ponto/:pontoId/count')
+  @ApiOperation({ summary: 'Contar comentários de um ponto turístico' })
   @ApiParam({
     name: 'pontoId',
     description: 'ID do ponto turístico',
@@ -96,53 +97,57 @@ export class AvaliacaoController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Média de avaliações',
+    description: 'Número de comentários do ponto turístico',
     schema: {
       example: {
         pontoId: '550e8400-e29b-41d4-a716-446655440000',
-        averageRating: 4.5,
+        count: 15,
       },
     },
   })
-  async getAverageRating(@Param('pontoId') pontoId: string) {
-    const averageRating = await this.avaliacaoService.getAverageRating(pontoId);
+  async countByPontoTuristico(@Param('pontoId') pontoId: string) {
+    const count = await this.comentariosService.countByPontoTuristico(pontoId);
     return {
       pontoId,
-      averageRating,
+      count,
     };
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Buscar avaliação por ID' })
+  @ApiOperation({ summary: 'Buscar comentário por ID' })
   @ApiParam({
     name: 'id',
-    description: 'ID da avaliação',
+    description: 'ID do comentário',
     type: 'string',
   })
   @ApiResponse({
     status: 200,
-    description: 'Avaliação encontrada',
+    description: 'Comentário encontrado',
   })
   @ApiResponse({
     status: 404,
-    description: 'Avaliação não encontrada',
+    description: 'Comentário não encontrado',
   })
   findOne(@Param('id') id: string) {
-    return this.avaliacaoService.findOne(id);
+    return this.comentariosService.findOne(id);
   }
 
   @Patch(':id')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Atualizar avaliação' })
+  @ApiOperation({ summary: 'Atualizar comentário' })
   @ApiParam({
     name: 'id',
-    description: 'ID da avaliação',
+    description: 'ID do comentário',
     type: 'string',
   })
   @ApiResponse({
     status: 200,
-    description: 'Avaliação atualizada com sucesso',
+    description: 'Comentário atualizado com sucesso',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Comentário vazio ou muito longo',
   })
   @ApiResponse({
     status: 401,
@@ -154,29 +159,33 @@ export class AvaliacaoController {
   })
   @ApiResponse({
     status: 404,
-    description: 'Avaliação não encontrada',
+    description: 'Comentário não encontrado',
   })
   update(
     @Param('id') id: string,
-    @Body() updateAvaliacaoDto: UpdateAvaliacaoDto,
+    @Body() updateComentarioDto: UpdateComentarioDto,
     @Request() req: { user: { sub: string } },
   ) {
-    return this.avaliacaoService.update(id, updateAvaliacaoDto, req.user.sub);
+    return this.comentariosService.update(
+      id,
+      updateComentarioDto,
+      req.user.sub,
+    );
   }
 
   @Delete(':id')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Deletar avaliação' })
+  @ApiOperation({ summary: 'Deletar comentário' })
   @ApiParam({
     name: 'id',
-    description: 'ID da avaliação',
+    description: 'ID do comentário',
     type: 'string',
   })
   @ApiResponse({
     status: 204,
-    description: 'Avaliação deletada com sucesso',
+    description: 'Comentário deletado com sucesso',
   })
   @ApiResponse({
     status: 401,
@@ -188,9 +197,9 @@ export class AvaliacaoController {
   })
   @ApiResponse({
     status: 404,
-    description: 'Avaliação não encontrada',
+    description: 'Comentário não encontrado',
   })
   remove(@Param('id') id: string, @Request() req: { user: { sub: string } }) {
-    return this.avaliacaoService.remove(id, req.user.sub);
+    return this.comentariosService.remove(id, req.user.sub);
   }
 }
