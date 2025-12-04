@@ -9,8 +9,7 @@ import { Avaliacao } from './entities/avaliacao.entity';
 import { Fotos, FotosSchema } from './schema/fotos.schema';
 import { Comentarios, ComentariosSchema } from './schema/comentarios.schema';
 import { CacheModule } from '@nestjs/cache-manager';
-import KeyvRedis, { Keyv } from '@keyv/redis';
-import { CacheableMemory } from 'cacheable';
+import { redisStore } from 'cache-manager-redis-store';
 
 @Module({
   imports: [
@@ -40,17 +39,18 @@ import { CacheableMemory } from 'cacheable';
       { name: Fotos.name, schema: FotosSchema },
       { name: Comentarios.name, schema: ComentariosSchema },
     ]),
-    CacheModule.register({
-      useFactory: (configService: ConfigService) => {
-        return {
-          stores: [
-            new Keyv({
-              store: new CacheableMemory({ ttl: 60000, lruSize: 5000 }),
-            }),
-            new KeyvRedis(configService.getOrThrow('REDIS_URL')),
-          ],
-        };
-      },
+    CacheModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (config: ConfigService) => ({
+        store: await redisStore({
+          socket: {
+            host: config.get('REDIS_HOST') ?? 'localhost',
+            port: Number(config.get('REDIS_PORT') ?? 6379),
+          },
+        }),
+        ttl: 60 * 1000,
+      }),
     }),
   ],
   exports: [MongooseModule],
