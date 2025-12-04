@@ -39,7 +39,7 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/manager/:path" element={<Manager />} />
+          <Route path="/manager/:path?" element={<Manager />} />
         </Routes>
       </BrowserRouter>
     </ThemeProvider>

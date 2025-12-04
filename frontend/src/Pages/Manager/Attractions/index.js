@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Box,
   Button,
@@ -8,26 +8,15 @@ import {
   Alert,
   Snackbar,
   Grid,
+  TextField,
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import { Edit, Delete, PhotoCamera, Add } from "@mui/icons-material";
 import { CustomInput, LoadingBox } from "../../../Components/Custom";
 import { Modal } from "../../../Components/Modal";
+import axios from "axios";
 
-const API_URL = "http://localhost:3000/pontos-turisticos";
-
-const style = {
-  position: "absolute",
-  top: "50%",
-  left: "50%",
-  transform: "translate(-50%, -50%)",
-  bgcolor: "background.paper",
-  boxShadow: 24,
-  p: 4,
-  minWidth: 500,
-  maxHeight: "90vh",
-  overflow: "auto",
-};
+const API_URL = "http://localhost:3001/pontos-turisticos";
 
 export default function AttractionsManager() {
   const [attractions, setAttractions] = useState([]);
@@ -51,8 +40,8 @@ export default function AttractionsManager() {
     cidade: "",
     estado: "",
     pais: "Brasil",
-    latitude: 0,
-    longitude: 0,
+    latitude: "",
+    longitude: "",
     endereco: "",
   });
 
@@ -64,15 +53,14 @@ export default function AttractionsManager() {
   const fetchAttractions = async () => {
     try {
       setLoading(true);
-      const response = await fetch(API_URL);
-      if (!response.ok) throw new Error("Erro ao buscar pontos turísticos");
-      const data = await response.json();
-      setAttractions(data);
+      const response = await axios.get(API_URL);
+      setAttractions(response.data);
     } catch (error) {
-      showSnackbar(
-        "Erro ao carregar pontos turísticos: " + error.message,
-        "error"
-      );
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Erro ao carregar pontos turísticos";
+      showSnackbar("Erro ao carregar pontos turísticos: " + message, "error");
     } finally {
       setLoading(false);
     }
@@ -140,84 +128,87 @@ export default function AttractionsManager() {
       cidade: "",
       estado: "",
       pais: "Brasil",
-      latitude: 0,
-      longitude: 0,
+      latitude: "",
+      longitude: "",
       endereco: "",
     });
   };
 
-  const handleInputChange = (field, value) => {
-    setFormData({ ...formData, [field]: value });
+  const handleInputChange = (field) => (e) => {
+    setFormData((prev) => ({ ...prev, [field]: e.target.value }));
   };
 
   // CRUD Operations
   const handleCreate = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(API_URL, {
-        method: "POST",
+      const payload = {
+        ...formData,
+        latitude: parseFloat(formData.latitude) || 0,
+        longitude: parseFloat(formData.longitude) || 0,
+      };
+      await axios.post(API_URL, payload, {
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
       });
-
-      if (!response.ok) throw new Error("Erro ao criar ponto turístico");
 
       await fetchAttractions();
       showSnackbar("Ponto turístico criado com sucesso!");
       handleCloseAddModal();
     } catch (error) {
-      showSnackbar("Erro ao criar ponto turístico: " + error.message, "error");
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Erro ao criar ponto turístico";
+      showSnackbar("Erro ao criar ponto turístico: " + message, "error");
     }
   };
 
   const handleUpdate = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${API_URL}/${selectedAttraction.id}`, {
-        method: "PATCH",
+      const payload = {
+        ...formData,
+        latitude: parseFloat(formData.latitude) || 0,
+        longitude: parseFloat(formData.longitude) || 0,
+      };
+      await axios.patch(`${API_URL}/${selectedAttraction.id}`, payload, {
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
       });
-
-      if (!response.ok) throw new Error("Erro ao atualizar ponto turístico");
 
       await fetchAttractions();
       showSnackbar("Ponto turístico atualizado com sucesso!");
       handleCloseEditModal();
     } catch (error) {
-      showSnackbar(
-        "Erro ao atualizar ponto turístico: " + error.message,
-        "error"
-      );
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Erro ao atualizar ponto turístico";
+      showSnackbar("Erro ao atualizar ponto turístico: " + message, "error");
     }
   };
 
   const handleDelete = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${API_URL}/${selectedAttraction.id}`, {
-        method: "DELETE",
+      await axios.delete(`${API_URL}/${selectedAttraction.id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      if (!response.ok) throw new Error("Erro ao deletar ponto turístico");
-
       await fetchAttractions();
       showSnackbar("Ponto turístico deletado com sucesso!");
       handleCloseDeleteModal();
     } catch (error) {
-      showSnackbar(
-        "Erro ao deletar ponto turístico: " + error.message,
-        "error"
-      );
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Erro ao deletar ponto turístico";
+      showSnackbar("Erro ao deletar ponto turístico: " + message, "error");
     }
   };
 
@@ -229,14 +220,14 @@ export default function AttractionsManager() {
       headerName: "Cidade/Estado",
       flex: 1,
       minWidth: 150,
-      valueGetter: (params) => `${params.row.cidade}/${params.row.estado}`,
+      valueGetter: (value, row) => `${row.cidade}/${row.estado}`,
     },
     {
       field: "descricao",
       headerName: "Descrição",
       flex: 2,
       minWidth: 250,
-      renderCell: (params) => params.value?.substring(0, 100) + "...",
+      renderCell: (params) => params.row.descricao?.substring(0, 100) + "...",
     },
     {
       field: "acoes",
@@ -285,83 +276,6 @@ export default function AttractionsManager() {
       attraction.cidade.toLowerCase().includes(filterCity.toLowerCase());
     return matchesSearch && matchesCity;
   });
-
-  const FormFields = () => (
-    <Grid container spacing={4} sx={{ mt: 1 }}>
-      <Grid size={{ xs: 12, md: 4 }}>
-        <CustomInput
-          fullWidth
-          label="Nome"
-          value={formData.nome}
-          onChange={(e) => handleInputChange("nome", e.target.value)}
-        />
-      </Grid>
-      <Grid size={{ xs: 12, md: 4 }}>
-        <CustomInput
-          fullWidth
-          label="Cidade"
-          value={formData.cidade}
-          onChange={(e) => handleInputChange("cidade", e.target.value)}
-        />
-      </Grid>
-      <Grid size={{ xs: 12, md: 4 }}>
-        <CustomInput
-          fullWidth
-          label="Estado"
-          value={formData.estado}
-          onChange={(e) => handleInputChange("estado", e.target.value)}
-        />
-      </Grid>
-      <Grid size={{ xs: 12, md: 4 }}>
-        <CustomInput
-          fullWidth
-          label="País"
-          value={formData.pais}
-          onChange={(e) => handleInputChange("pais", e.target.value)}
-        />
-      </Grid>
-      <Grid size={{ xs: 12, md: 4 }}>
-        <CustomInput
-          fullWidth
-          label="Latitude"
-          type="number"
-          value={formData.latitude}
-          onChange={(e) =>
-            handleInputChange("latitude", parseFloat(e.target.value))
-          }
-        />
-      </Grid>
-      <Grid size={{ xs: 12, md: 4 }}>
-        <CustomInput
-          fullWidth
-          label="Longitude"
-          type="number"
-          value={formData.longitude}
-          onChange={(e) =>
-            handleInputChange("longitude", parseFloat(e.target.value))
-          }
-        />
-      </Grid>
-      <Grid size={12}>
-        <CustomInput
-          fullWidth
-          label="Endereço"
-          value={formData.endereco}
-          onChange={(e) => handleInputChange("endereco", e.target.value)}
-        />
-      </Grid>{" "}
-      <Grid size={12}>
-        <CustomInput
-          fullWidth
-          label="Descrição"
-          value={formData.descricao}
-          onChange={(e) => handleInputChange("descricao", e.target.value)}
-          multiline
-          minRows={3}
-        />
-      </Grid>
-    </Grid>
-  );
 
   return (
     <Box sx={{ p: 3 }}>
@@ -424,44 +338,111 @@ export default function AttractionsManager() {
       </Paper>
 
       {/* Modal de Fotos */}
-      <Modal open={openPhotoModal} onClose={handleClosePhotoModal}>
-        <Box sx={style}>
-          <Typography variant="h6" sx={{ mb: 2 }}>
-            Fotos de {selectedAttraction?.nome}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Funcionalidade de upload de fotos em desenvolvimento...
-          </Typography>
-          <Box sx={{ mt: 2 }}>
-            <Button variant="outlined" onClick={handleClosePhotoModal}>
-              Fechar
-            </Button>
-          </Box>
-        </Box>
+      <Modal
+        open={openPhotoModal}
+        onClose={handleClosePhotoModal}
+        maxWidth="sm"
+        titulo="Fotos do Ponto Turístico"
+      >
+        <Typography variant="h6" sx={{ mb: 2 }}>
+          Fotos de {selectedAttraction?.nome}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Funcionalidade de upload de fotos em desenvolvimento...
+        </Typography>
       </Modal>
 
       {/* Modal de Edição */}
       <Modal
         open={openEditModal}
-        handleClose={handleCloseEditModal}
+        onClose={handleCloseEditModal}
         maxWidth="md"
         titulo="Editar Ponto Turístico"
         buttons={[
           {
             title: "Cancelar",
             variant: "outlined",
-            onClick: handleCloseEditModal,
+            action: handleCloseEditModal,
             color: "secondary",
           },
           {
             title: "Salvar",
             variant: "contained",
-            onClick: handleUpdate,
+            action: handleUpdate,
             color: "primary",
           },
         ]}
       >
-        <FormFields />
+        <Grid container spacing={4} sx={{ mt: 1 }}>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <CustomInput
+              fullWidth
+              label="Nome"
+              value={formData.nome}
+              onChange={handleInputChange("nome")}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <CustomInput
+              fullWidth
+              label="Cidade"
+              value={formData.cidade}
+              onChange={handleInputChange("cidade")}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <CustomInput
+              fullWidth
+              label="Estado"
+              value={formData.estado}
+              onChange={handleInputChange("estado")}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <CustomInput
+              fullWidth
+              label="País"
+              value={formData.pais}
+              onChange={handleInputChange("pais")}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <CustomInput
+              fullWidth
+              label="Latitude"
+              type="number"
+              value={formData.latitude}
+              onChange={handleInputChange("latitude")}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <CustomInput
+              fullWidth
+              label="Longitude"
+              type="number"
+              value={formData.longitude}
+              onChange={handleInputChange("longitude")}
+            />
+          </Grid>
+          <Grid size={12}>
+            <CustomInput
+              fullWidth
+              label="Endereço"
+              value={formData.endereco}
+              onChange={handleInputChange("endereco")}
+            />
+          </Grid>
+          <Grid size={12}>
+            <CustomInput
+              fullWidth
+              label="Descrição"
+              value={formData.descricao}
+              onChange={handleInputChange("descricao")}
+              multiline
+              minRows={3}
+            />
+          </Grid>
+        </Grid>
       </Modal>
 
       {/* Modal de Cadastro */}
@@ -474,18 +455,87 @@ export default function AttractionsManager() {
           {
             title: "Cancelar",
             variant: "outlined",
-            onClick: handleCloseAddModal,
+            action: handleCloseAddModal,
             color: "secondary",
           },
           {
             title: "Cadastrar",
             variant: "contained",
-            onClick: handleCreate,
+            action: handleCreate,
             color: "primary",
           },
         ]}
       >
-        <FormFields />
+        <Grid container spacing={4} sx={{ mt: 1 }}>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <CustomInput
+              fullWidth
+              label="Nome"
+              value={formData.nome}
+              onChange={handleInputChange("nome")}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <CustomInput
+              fullWidth
+              label="Cidade"
+              value={formData.cidade}
+              onChange={handleInputChange("cidade")}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <CustomInput
+              fullWidth
+              label="Estado"
+              value={formData.estado}
+              onChange={handleInputChange("estado")}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <CustomInput
+              fullWidth
+              label="País"
+              value={formData.pais}
+              onChange={handleInputChange("pais")}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <CustomInput
+              fullWidth
+              label="Latitude"
+              type="number"
+              value={formData.latitude}
+              onChange={handleInputChange("latitude")}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <CustomInput
+              fullWidth
+              label="Longitude"
+              type="number"
+              value={formData.longitude}
+              onChange={handleInputChange("longitude")}
+            />
+          </Grid>
+          <Grid size={12}>
+            <CustomInput
+              fullWidth
+              label="Endereço"
+              value={formData.endereco}
+              onChange={handleInputChange("endereco")}
+            />
+          </Grid>
+          <Grid size={12}>
+            <CustomInput
+              fullWidth
+              label="Descrição"
+              value={formData.descricao}
+              onChange={handleInputChange("descricao")}
+              multiline
+              minRows={3}
+            />
+          </Grid>
+        </Grid>
       </Modal>
 
       {/* Modal de Confirmação de Exclusão */}
@@ -493,17 +543,18 @@ export default function AttractionsManager() {
         open={openDeleteModal}
         onClose={handleCloseDeleteModal}
         titulo="Confirmar Exclusão"
+        maxWidth="xs"
         buttons={[
           {
             title: "Cancelar",
             variant: "outlined",
-            onClick: handleCloseDeleteModal,
+            action: handleCloseDeleteModal,
             color: "secondary",
           },
           {
             title: "Excluir",
             variant: "contained",
-            onClick: handleDelete,
+            action: handleDelete,
             color: "error",
           },
         ]}
