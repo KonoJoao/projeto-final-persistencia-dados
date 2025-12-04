@@ -13,13 +13,12 @@ import Banner from "../../Assets/Login/banner.png";
 import { CustomInput } from "../../Components/Custom";
 import { useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const API_URL = "http://localhost:3001/users";
 
-export default function Login() {
+export default function Login({ page }) {
   const navigate = useNavigate();
-  const [tabValue, setTabValue] = useState(0);
   const [loginForm, setLoginForm] = useState({
     identifier: "",
     senha: "",
@@ -42,10 +41,6 @@ export default function Login() {
 
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
-  };
-
-  const handleTabChange = (event, newValue) => {
-    setTabValue(newValue);
   };
 
   const handleLoginInputChange = (field, value) => {
@@ -121,19 +116,9 @@ export default function Login() {
           className="show-box-outlined"
           sx={{ minWidth: { xs: "90%", sm: "400px" } }}
         >
-          <Tabs
-            value={tabValue}
-            onChange={handleTabChange}
-            centered
-            sx={{ mb: 2 }}
-          >
-            <Tab label="Login" />
-            <Tab label="Cadastro" />
-          </Tabs>
-
-          {tabValue === 0 ? (
+          {page === "login" ? (
             <Stack spacing={3} sx={{ p: "16px 24px", pb: 4 }}>
-              <Typography variant="h6" sx={{ textAlign: "center", pb: 2 }}>
+              <Typography variant="h6" sx={{ textAlign: "center", pb: 4 }}>
                 Acesse sua conta
               </Typography>
               <CustomInput
@@ -153,6 +138,10 @@ export default function Login() {
                   handleLoginInputChange("senha", e.target.value)
                 }
               />
+
+              <Typography variant="body2" sx={{ mb: 3 }}>
+                <Link to="/logon">Não possui uma conta? Crie uma</Link>
+              </Typography>
               <Button
                 disableElevation
                 variant="contained"
@@ -194,6 +183,9 @@ export default function Login() {
                   handleRegisterInputChange("senha", e.target.value)
                 }
               />
+              <Typography variant="body2" sx={{ mb: 3 }}>
+                <Link to="/login">Já possui uma conta? Acesse-a</Link>
+              </Typography>
               <Button
                 disableElevation
                 variant="contained"

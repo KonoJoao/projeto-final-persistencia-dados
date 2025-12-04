@@ -22,7 +22,9 @@ export default function Sidebar({ routes, children, base = "" }) {
   const [selected, setSelected] = useState("");
 
   useEffect(() => {
-    const current = routes.find((r) => r.to.endsWith(`/${path}`));
+    const current = routes.find(
+      (r) => r.to.endsWith(`/${path || ""}`) || (!r.to && !path)
+    );
     if (!current) return;
 
     setSelected(current.to || "");

@@ -9,25 +9,34 @@ import {
   Snackbar,
   Grid,
   TextField,
+  Card,
+  CardMedia,
+  Tooltip,
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
-import { Edit, Delete, PhotoCamera, Add } from "@mui/icons-material";
+import { Edit, Delete, PhotoCamera, Add, Close } from "@mui/icons-material";
 import { CustomInput, LoadingBox } from "../../../Components/Custom";
 import { Modal } from "../../../Components/Modal";
+import ImageUploader from "../../../Components/ImageUploader";
 import axios from "axios";
 
 const API_URL = "http://localhost:3001/pontos-turisticos";
+const FOTOS_API_URL = "http://localhost:3001/fotos";
 
-export default function AttractionsManager() {
+export default function PontosTuristicos() {
   const [attractions, setAttractions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openPhotoModal, setOpenPhotoModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
   const [openAddModal, setOpenAddModal] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
+  const [openDeletePhotoModal, setOpenDeletePhotoModal] = useState(false);
   const [selectedAttraction, setSelectedAttraction] = useState(null);
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCity, setFilterCity] = useState("");
+  const [photos, setPhotos] = useState([]);
+  const [loadingPhotos, setLoadingPhotos] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -74,12 +83,81 @@ export default function AttractionsManager() {
     setSnackbar({ ...snackbar, open: false });
   };
 
+  // Funções para gerenciar fotos
+  const fetchPhotos = async (pontoId) => {
+    try {
+      setLoadingPhotos(true);
+      console.log("Buscando fotos para o ponto:", pontoId);
+      const response = await axios.get(`${FOTOS_API_URL}/ponto/${pontoId}`);
+      console.log("Fotos recebidas:", response.data);
+      setPhotos(response.data);
+    } catch (error) {
+      console.error("Erro ao buscar fotos:", error);
+      showSnackbar("Erro ao carregar fotos", "error");
+    } finally {
+      setLoadingPhotos(false);
+    }
+  };
+
+  const handleUploadSuccess = async (response) => {
+    showSnackbar("Fotos enviadas com sucesso!", "success");
+    if (selectedAttraction) {
+      await fetchPhotos(selectedAttraction.id);
+    }
+  };
+
+  const handleUploadError = (error) => {
+    showSnackbar(`Erro ao fazer upload: ${error.message}`, "error");
+  };
+
+  const handleDeletePhoto = (photoId) => {
+    setSelectedPhoto(photoId);
+    setOpenDeletePhotoModal(true);
+  };
+
+  const confirmDeletePhoto = async () => {
+    if (!selectedPhoto) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`${FOTOS_API_URL}/${selectedPhoto}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      showSnackbar("Foto excluída com sucesso!", "success");
+
+      // Atualizar lista de fotos
+      if (selectedAttraction) {
+        await fetchPhotos(selectedAttraction.id);
+      }
+    } catch (error) {
+      console.error("Erro ao excluir foto:", error);
+      const message = error.response?.data?.message || "Erro ao excluir foto";
+      showSnackbar(message, "error");
+    } finally {
+      setOpenDeletePhotoModal(false);
+      setSelectedPhoto(null);
+    }
+  };
+
+  const handleCloseDeletePhotoModal = () => {
+    setOpenDeletePhotoModal(false);
+    setSelectedPhoto(null);
+  };
+
   // Handlers para modais
-  const handleOpenPhotoModal = (attraction) => {
+  const handleOpenPhotoModal = async (attraction) => {
     setSelectedAttraction(attraction);
     setOpenPhotoModal(true);
+    await fetchPhotos(attraction.id);
   };
-  const handleClosePhotoModal = () => setOpenPhotoModal(false);
+
+  const handleClosePhotoModal = () => {
+    setOpenPhotoModal(false);
+    setPhotos([]);
+  };
 
   const handleOpenEditModal = (attraction) => {
     setSelectedAttraction(attraction);
@@ -237,30 +315,33 @@ export default function AttractionsManager() {
       filterable: false,
       renderCell: (params) => (
         <Box>
-          <IconButton
-            onClick={() => handleOpenPhotoModal(params.row)}
-            title="Fotos"
-            color="primary"
-            size="small"
-          >
-            <PhotoCamera />
-          </IconButton>
-          <IconButton
-            onClick={() => handleOpenEditModal(params.row)}
-            title="Editar"
-            color="primary"
-            size="small"
-          >
-            <Edit />
-          </IconButton>
-          <IconButton
-            onClick={() => handleOpenDeleteModal(params.row)}
-            title="Excluir"
-            color="error"
-            size="small"
-          >
-            <Delete />
-          </IconButton>
+          <Tooltip title="Ver fotos">
+            <IconButton
+              onClick={() => handleOpenPhotoModal(params.row)}
+              title="Fotos"
+              size="small"
+            >
+              <PhotoCamera />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Editar">
+            <IconButton
+              onClick={() => handleOpenEditModal(params.row)}
+              title="Editar"
+              size="small"
+            >
+              <Edit />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Excluir">
+            <IconButton
+              onClick={() => handleOpenDeleteModal(params.row)}
+              title="Excluir"
+              size="small"
+            >
+              <Close />
+            </IconButton>
+          </Tooltip>
         </Box>
       ),
     },
@@ -341,15 +422,147 @@ export default function AttractionsManager() {
       <Modal
         open={openPhotoModal}
         onClose={handleClosePhotoModal}
-        maxWidth="sm"
+        maxWidth="md"
         titulo="Fotos do Ponto Turístico"
       >
-        <Typography variant="h6" sx={{ mb: 2 }}>
-          Fotos de {selectedAttraction?.nome}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Funcionalidade de upload de fotos em desenvolvimento...
-        </Typography>
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            {selectedAttraction?.nome}
+          </Typography>
+
+          <ImageUploader
+            endpoint={`${FOTOS_API_URL}/upload`}
+            getFileName={(file, index) => {
+              const extension = file.name.split(".").pop();
+              const timestamp = Date.now();
+              const slug = selectedAttraction?.nome
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, "-");
+              return `${slug}_${timestamp}_${index}.${extension}`;
+            }}
+            maxFiles={10}
+            acceptedFormats={["image/jpeg", "image/png", "image/webp"]}
+            maxSizeMB={5}
+            onSuccess={handleUploadSuccess}
+            onError={handleUploadError}
+            additionalData={{
+              pontoId: selectedAttraction?.id,
+              titulo: selectedAttraction?.nome,
+            }}
+            fieldName="fotos"
+            token={localStorage.getItem("token")}
+          />
+        </Box>
+
+        {/* Lista de Fotos */}
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Fotos Carregadas ({photos.length})
+          </Typography>
+
+          {loadingPhotos ? (
+            <Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>
+              <Typography>Carregando fotos...</Typography>
+            </Box>
+          ) : photos.length === 0 ? (
+            <Paper
+              elevation={0}
+              sx={{
+                p: 3,
+                textAlign: "center",
+                bgcolor: "grey.50",
+                border: "1px solid",
+                borderColor: "grey.300",
+                borderRadius: 2,
+              }}
+            >
+              <Typography color="text.secondary">
+                Nenhuma foto carregada ainda
+              </Typography>
+            </Paper>
+          ) : (
+            <Grid container spacing={2}>
+              {photos.map((photo) => {
+                const imageUrl = `${FOTOS_API_URL}/${photo._id}/download`;
+
+                return (
+                  <Grid size={{ xs: 12, md: 4 }} key={photo._id}>
+                    <Card
+                      elevation={0}
+                      sx={{
+                        position: "relative",
+                        paddingTop: "100%",
+                        overflow: "hidden",
+                        border: "1px solid",
+                        borderColor: "grey.300",
+                        borderRadius: 2,
+                        "&:hover .photo-overlay": { opacity: 1 },
+                      }}
+                    >
+                      {/* 🔥 Agora a imagem usa <img>, permitindo onError */}
+                      <img
+                        src={imageUrl}
+                        alt={photo.titulo || "Foto"}
+                        onError={(e) => {
+                          console.error("Erro ao carregar imagem:", imageUrl);
+                          e.target.src = "/placeholder.jpg"; // opcional
+                        }}
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                        }}
+                      />
+
+                      {/* Overlay */}
+                      <Box
+                        className="photo-overlay"
+                        sx={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          height: "100%",
+                          background:
+                            "linear-gradient(to bottom, rgba(0,0,0,0.7), transparent)",
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "space-between",
+                          p: 1.5,
+                          opacity: 0,
+                          transition: "opacity 0.3s",
+                        }}
+                      >
+                        <Box>
+                          <Typography
+                            variant="body1"
+                            sx={{ color: "white", display: "block", mb: 0.5 }}
+                          >
+                            {photo.titulo || "Sem título"}
+                          </Typography>
+                        </Box>
+
+                        <Box
+                          sx={{ display: "flex", justifyContent: "flex-end" }}
+                        >
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDeletePhoto(photo._id)}
+                          >
+                            <Close />
+                          </IconButton>
+                        </Box>
+                      </Box>
+                    </Card>
+                  </Grid>
+                );
+              })}
+            </Grid>
+          )}
+        </Box>
       </Modal>
 
       {/* Modal de Edição */}
@@ -565,7 +778,32 @@ export default function AttractionsManager() {
         </Typography>
       </Modal>
 
-      {/* Snackbar para mensagens */}
+      {/* Modal de Confirmação de Exclusão de Foto */}
+      <Modal
+        open={openDeletePhotoModal}
+        onClose={handleCloseDeletePhotoModal}
+        maxWidth="xs"
+        titulo="Confirmar Exclusão"
+        buttons={[
+          {
+            title: "Cancelar",
+            variant: "outlined",
+            action: handleCloseDeletePhotoModal,
+            color: "secondary",
+          },
+          {
+            title: "Excluir Foto",
+            variant: "contained",
+            action: confirmDeletePhoto,
+            color: "error",
+          },
+        ]}
+      >
+        <Typography variant="body1">
+          Tem certeza que deseja excluir esta foto?
+        </Typography>
+      </Modal>
+
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}

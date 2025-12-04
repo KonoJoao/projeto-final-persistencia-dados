@@ -2,8 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navbar from "./Components/Navigation/Navbar";
 import Home from "./Pages/Home";
 import Login from "./Pages/Login";
-import Dashboard from "./Pages/Dashboard";
-import Manager from "./Pages/Manager";
+import DashboardPage from "./Pages/Dashboard";
 import { createTheme, ThemeProvider } from "@mui/material";
 
 export default function App() {
@@ -19,7 +18,7 @@ export default function App() {
         main: "#23C45D",
       },
       secondary: {
-        main: "#fff",
+        main: "#333",
       },
       warning: {
         main: "#E57F01",
@@ -37,9 +36,9 @@ export default function App() {
 
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/manager/:path?" element={<Manager />} />
+          <Route path="/login" element={<Login page="login" />} />
+          <Route path="/logon" element={<Login page="logon" />} />
+          <Route path="/dashboard/:path?/:id?" element={<DashboardPage />} />
         </Routes>
       </BrowserRouter>
     </ThemeProvider>
