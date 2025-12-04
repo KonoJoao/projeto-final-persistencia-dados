@@ -46,9 +46,13 @@ export class PontoTuristicoService {
   async findAll({
     cidade,
     estado,
+    page = 1,
+    pageSize = 10,
   }: {
     cidade?: string;
     estado?: string;
+    page?: number;
+    pageSize?: number;
   }): Promise<PontoTuristico[]> {
     return await this.pontoTuristicoRepository.find({
       relations: ['criador'],
@@ -63,6 +67,8 @@ export class PontoTuristicoService {
           email: true,
         },
       },
+      take: pageSize,
+      skip: (page - 1) * pageSize,
     });
   }
 
