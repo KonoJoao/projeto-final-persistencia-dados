@@ -3,7 +3,8 @@ import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { Box } from "@mui/material";
 import Sidebar from "../../Components/Navigation/Sidebar";
 import PontosTuristicos from "./PontosTuristicos";
-import { Attractions, Dashboard } from "@mui/icons-material";
+import { Attractions, Dashboard, Star } from "@mui/icons-material";
+import ComentariosManager from "./PontosTuristicos/comentarios";
 
 const routes = [
   {
@@ -21,7 +22,6 @@ const routes = [
 export default function DashboardPage() {
   const { path } = useParams();
   const [page, setPage] = useState(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     setPage(pages[path || ""]);

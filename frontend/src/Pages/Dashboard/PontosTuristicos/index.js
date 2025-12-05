@@ -14,10 +14,18 @@ import {
   Tooltip,
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
-import { Edit, Delete, PhotoCamera, Add, Close } from "@mui/icons-material";
+import {
+  Edit,
+  Delete,
+  PhotoCamera,
+  Add,
+  Close,
+  Comment,
+} from "@mui/icons-material";
 import { CustomInput, LoadingBox } from "../../../Components/Custom";
 import { Modal } from "../../../Components/Modal";
 import ImageUploader from "../../../Components/ImageUploader";
+import ComentariosManager from "./comentarios";
 import axios from "axios";
 
 const API_URL = "http://localhost:3001/pontos-turisticos";
@@ -31,6 +39,7 @@ export default function PontosTuristicos() {
   const [openAddModal, setOpenAddModal] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [openDeletePhotoModal, setOpenDeletePhotoModal] = useState(false);
+  const [openComentariosModal, setOpenComentariosModal] = useState(false);
   const [selectedAttraction, setSelectedAttraction] = useState(null);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -199,6 +208,16 @@ export default function PontosTuristicos() {
     setSelectedAttraction(null);
   };
 
+  const handleOpenComentariosModal = (attraction) => {
+    setSelectedAttraction(attraction);
+    setOpenComentariosModal(true);
+  };
+
+  const handleCloseComentariosModal = () => {
+    setOpenComentariosModal(false);
+    setSelectedAttraction(null);
+  };
+
   const resetForm = () => {
     setFormData({
       nome: "",
@@ -310,33 +329,39 @@ export default function PontosTuristicos() {
     {
       field: "acoes",
       headerName: "Ações",
-      width: 150,
+      width: 200,
       sortable: false,
       filterable: false,
       renderCell: (params) => (
         <Box>
-          <Tooltip title="Ver fotos">
+          <Tooltip title="Ver comentários" arrow>
+            <IconButton
+              onClick={() => handleOpenComentariosModal(params.row)}
+              size="small"
+              color="primary"
+            >
+              <Comment />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Ver fotos" arrow>
             <IconButton
               onClick={() => handleOpenPhotoModal(params.row)}
-              title="Fotos"
               size="small"
             >
               <PhotoCamera />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Editar">
+          <Tooltip title="Editar" arrow>
             <IconButton
               onClick={() => handleOpenEditModal(params.row)}
-              title="Editar"
               size="small"
             >
               <Edit />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Excluir">
+          <Tooltip title="Excluir" arrow>
             <IconButton
               onClick={() => handleOpenDeleteModal(params.row)}
-              title="Excluir"
               size="small"
             >
               <Close />
@@ -802,6 +827,29 @@ export default function PontosTuristicos() {
         <Typography variant="body1">
           Tem certeza que deseja excluir esta foto?
         </Typography>
+      </Modal>
+
+      {/* Modal de Comentários */}
+      <Modal
+        open={openComentariosModal}
+        onClose={handleCloseComentariosModal}
+        maxWidth="lg"
+        titulo="Gerenciar Comentários"
+        buttons={[
+          {
+            title: "Fechar",
+            variant: "outlined",
+            action: handleCloseComentariosModal,
+            color: "primary",
+          },
+        ]}
+      >
+        {selectedAttraction && (
+          <ComentariosManager
+            pontoId={selectedAttraction.id}
+            pontoNome={selectedAttraction.nome}
+          />
+        )}
       </Modal>
 
       <Snackbar

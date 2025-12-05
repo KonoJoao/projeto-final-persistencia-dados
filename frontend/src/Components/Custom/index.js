@@ -229,7 +229,7 @@ export default function CustomDateInput({ value, onChange, label, ...props }) {
   );
 }
 
-export const LoadingBox = ({ message }) => {
+export const LoadingBox = ({ message = "Carregando..." }) => {
   return (
     <Box
       sx={{

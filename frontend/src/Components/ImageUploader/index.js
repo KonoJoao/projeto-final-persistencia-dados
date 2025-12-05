@@ -11,6 +11,7 @@ import {
   Typography,
   Chip,
   Alert,
+  Tooltip,
 } from "@mui/material";
 import { CloudUpload, Delete, Clear } from "@mui/icons-material";
 import axios from "axios";
@@ -341,24 +342,26 @@ const ImageUploader = ({
                     </Typography>
 
                     <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-                      <IconButton
-                        size="small"
-                        onClick={() => removeFile(index)}
-                        disabled={uploading}
-                        sx={{
-                          bgcolor: "error.main",
-                          color: "white",
-                          "&:hover": {
-                            bgcolor: "error.dark",
-                          },
-                          "&:disabled": {
-                            bgcolor: "grey.400",
-                            color: "grey.600",
-                          },
-                        }}
-                      >
-                        <Delete fontSize="small" />
-                      </IconButton>
+                      <Tooltip title="Remover imagem" arrow>
+                        <IconButton
+                          size="small"
+                          onClick={() => removeFile(index)}
+                          disabled={uploading}
+                          sx={{
+                            bgcolor: "error.main",
+                            color: "white",
+                            "&:hover": {
+                              bgcolor: "error.dark",
+                            },
+                            "&:disabled": {
+                              bgcolor: "grey.400",
+                              color: "grey.600",
+                            },
+                          }}
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                     </Box>
                   </Box>
                 </Card>
@@ -386,26 +389,34 @@ const ImageUploader = ({
       {/* Action Buttons */}
       {selectedFiles.length > 0 && (
         <Box sx={{ mt: 3, display: "flex", gap: 2, justifyContent: "center" }}>
-          <Button
-            variant="contained"
-            startIcon={<CloudUpload />}
-            onClick={handleUpload}
-            disabled={uploading}
-            size="large"
-            disableElevation
-          >
-            {uploading ? "Enviando..." : `Fazer Upload`}
-          </Button>
+          <Tooltip title="Enviar imagens selecionadas" arrow>
+            <span>
+              <Button
+                variant="contained"
+                startIcon={<CloudUpload />}
+                onClick={handleUpload}
+                disabled={uploading}
+                size="large"
+                disableElevation
+              >
+                {uploading ? "Enviando..." : `Fazer Upload`}
+              </Button>
+            </span>
+          </Tooltip>
 
-          <Button
-            variant="outlined"
-            startIcon={<Clear />}
-            onClick={clearAll}
-            disabled={uploading}
-            size="large"
-          >
-            Limpar
-          </Button>
+          <Tooltip title="Remover todas as imagens" arrow>
+            <span>
+              <Button
+                variant="outlined"
+                startIcon={<Clear />}
+                onClick={clearAll}
+                disabled={uploading}
+                size="large"
+              >
+                Limpar
+              </Button>
+            </span>
+          </Tooltip>
         </Box>
       )}
     </Box>

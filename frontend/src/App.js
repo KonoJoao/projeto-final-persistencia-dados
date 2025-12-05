@@ -4,6 +4,8 @@ import Home from "./Pages/Home";
 import Login from "./Pages/Login";
 import DashboardPage from "./Pages/Dashboard";
 import { createTheme, ThemeProvider } from "@mui/material";
+import ComentariosManager from "./Pages/Dashboard/PontosTuristicos/comentarios";
+import ComentariosPage from "./Pages/Comentarios";
 
 export default function App() {
   const theme = createTheme({
@@ -39,6 +41,7 @@ export default function App() {
           <Route path="/login" element={<Login page="login" />} />
           <Route path="/logon" element={<Login page="logon" />} />
           <Route path="/dashboard/:path?/:id?" element={<DashboardPage />} />
+          <Route path="/comentarios/:id" element={<ComentariosPage />} />
         </Routes>
       </BrowserRouter>
     </ThemeProvider>
