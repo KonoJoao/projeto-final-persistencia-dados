@@ -18,13 +18,13 @@ a {
 }
 
 .show-box {
-  border-radius: 16px;
+  border-radius: 10px !important;
   background: rgba(0, 0, 0, 0.02);
   padding: 20px 15px;
 }
 
 .show-box-outlined {
-  border-radius: 16px;
+  border-radius: 10px !important;
   padding: 10px;
   border: 1.7px solid rgba(0, 0, 0, 0.2);
   padding: 20px 15px;

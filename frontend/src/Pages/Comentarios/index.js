@@ -202,15 +202,7 @@ export default function ComentariosPage() {
 
         {/* Formulário de Novo Comentário - Sidebar em telas grandes */}
         <Grid size={{ xs: 12, lg: 4 }}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 3,
-              border: "1px solid",
-              borderColor: "grey.300",
-              borderRadius: "10px",
-            }}
-          >
+          <Paper elevation={0} className="show-box-outlined">
             <Typography variant="h6" gutterBottom fontWeight="medium">
               Deixe sua avaliação
             </Typography>
@@ -285,14 +277,9 @@ export default function ComentariosPage() {
                   <Card
                     key={comentario.id}
                     elevation={0}
-                    sx={{
-                      borderRadius: "10px",
-                      transition: "all 0.2s",
-                      border: "1px solid",
-                      borderColor: "grey.300",
-                    }}
+                    className="show-box-outlined"
                   >
-                    <CardContent sx={{ p: 3 }}>
+                    <CardContent>
                       <Box
                         sx={{
                           display: "flex",
