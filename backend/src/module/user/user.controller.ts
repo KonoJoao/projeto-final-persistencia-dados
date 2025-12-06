@@ -18,6 +18,9 @@ import {
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthGuard } from '../../shared/auth/auth.guard';
+import { RolesGuard } from '../../shared/auth/guards/roles.guard';
+import { Roles } from '../../shared/auth/decorators/roles.decorator';
+import { UserRole } from '../../shared/database/entities/usuario.entity';
 
 @ApiTags('users')
 @Controller('users')
@@ -90,12 +93,17 @@ export class UserController {
   }
 
   @Get()
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Listar todos os usuários' })
+  @ApiOperation({ summary: 'Listar todos os usuários (apenas ADMIN)' })
   @ApiResponse({
     status: 200,
     description: 'Lista de usuários',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Acesso negado - apenas ADMIN',
   })
   async findAll() {
     return this.userService.findAll();

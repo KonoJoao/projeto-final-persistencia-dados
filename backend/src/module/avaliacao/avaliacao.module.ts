@@ -4,10 +4,10 @@ import { AvaliacaoService } from './avaliacao.service';
 import { AvaliacaoController } from './avaliacao.controller';
 import { Avaliacao } from '../../shared/database/entities/avaliacao.entity';
 import { PontoTuristico } from '../../shared/database/entities/ponto-turistico.entity';
-import { AuthModule } from '../../shared/auth/auth.module';
+import { Usuario } from 'src/shared/database/entities/usuario.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Avaliacao, PontoTuristico]), AuthModule],
+  imports: [TypeOrmModule.forFeature([Avaliacao, PontoTuristico, Usuario])],
   controllers: [AvaliacaoController],
   providers: [AvaliacaoService],
   exports: [AvaliacaoService],

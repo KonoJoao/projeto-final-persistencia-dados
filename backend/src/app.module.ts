@@ -10,6 +10,7 @@ import { AvaliacaoModule } from './module/avaliacao/avaliacao.module';
 import { FotosModule } from './module/fotos/fotos.module';
 import { ComentariosModule } from './module/comentarios/comentarios.module';
 import { HospedagemModule } from './module/hospedagem/hospedagem.module';
+import { AuthModule } from './shared/auth/auth.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { HospedagemModule } from './module/hospedagem/hospedagem.module';
     FotosModule,
     ComentariosModule,
     HospedagemModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

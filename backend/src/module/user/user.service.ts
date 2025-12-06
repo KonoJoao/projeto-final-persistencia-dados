@@ -20,7 +20,7 @@ export class UserService {
   ) {}
 
   async register(registerDto: RegisterDto): Promise<{ access_token: string }> {
-    const { login, email, senha } = registerDto;
+    const { login, email, senha, role } = registerDto;
 
     // Verificar se usuário já existe
     const existingUser = await this.usuarioRepository.findOne({
@@ -45,6 +45,7 @@ export class UserService {
       login,
       email,
       senha_hash,
+      role,
     });
 
     const usuarioSalvo = await this.usuarioRepository.save(novoUsuario);
@@ -57,6 +58,10 @@ export class UserService {
     loginDto: LoginDto,
   ): Promise<{ access_token: string; role: string }> {
     const { identifier, senha } = loginDto;
+
+    if (!identifier || !senha) {
+      throw new UnauthorizedException('Credenciais inválidas');
+    }
 
     // Buscar usuário por email ou login
     const usuario = await this.usuarioRepository.findOne({
