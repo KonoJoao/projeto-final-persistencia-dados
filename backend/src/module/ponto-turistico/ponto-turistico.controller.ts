@@ -75,17 +75,24 @@ export class PontoTuristicoController {
     description: 'Página atual',
   })
   @ApiQuery({
+    name: 'nome',
+    required: false,
+    description: 'Filtrar por nome',
+  })
+  @ApiQuery({
     name: 'pageSize',
     required: false,
     description: 'Tamanho da página',
   })
   findAll(
+    @Query('nome') nome?: string,
     @Query('cidade') cidade?: string,
     @Query('estado') estado?: string,
     @Query('page') page?: number,
     @Query('pageSize') pageSize?: number,
   ) {
     return this.pontoTuristicoService.findAll({
+      nome,
       cidade,
       estado,
       page,

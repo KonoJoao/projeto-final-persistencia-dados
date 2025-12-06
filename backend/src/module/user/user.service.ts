@@ -53,7 +53,9 @@ export class UserService {
     return this.generateToken(usuarioSalvo);
   }
 
-  async login(loginDto: LoginDto): Promise<{ access_token: string }> {
+  async login(
+    loginDto: LoginDto,
+  ): Promise<{ access_token: string; role: string }> {
     const { identifier, senha } = loginDto;
 
     // Buscar usuário por email ou login
@@ -73,7 +75,8 @@ export class UserService {
     }
 
     // Gerar token JWT
-    return this.generateToken(usuario);
+    const { access_token } = await this.generateToken(usuario);
+    return { access_token, role: usuario.role };
   }
 
   private async generateToken(

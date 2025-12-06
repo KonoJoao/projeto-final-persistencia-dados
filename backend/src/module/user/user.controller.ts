@@ -53,6 +53,7 @@ export class UserController {
     schema: {
       example: {
         access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        role: 'ADM',
       },
     },
   })
