@@ -27,6 +27,7 @@ export const Modal = ({
   loading = false,
   buttons = [],
   sx,
+  paperProps = {},
 }) => {
   return (
     <Dialog
@@ -74,7 +75,7 @@ export const Modal = ({
         </Container>
       ) : (
         <>
-          <DialogContent>
+          <DialogContent style={paperProps.style}>
             <Container
               maxWidth={maxWidth}
               sx={{

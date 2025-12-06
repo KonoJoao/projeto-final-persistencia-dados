@@ -7,14 +7,25 @@ import {
   Stack,
   IconButton,
 } from "@mui/material";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
-export default function Navbar() {
+export default function Navbar({ page }) {
+  const navigate = useNavigate();
+  const pages = [
+    { name: "Login", path: "/login" },
+    { name: "Dashboard", path: "/dashboard" },
+    { name: "Home", path: "/home" },
+  ];
+
   return (
     <AppBar
-      position="static"
+      position={page === "home" ? "fixed" : "static"}
       elevation={0}
-      sx={{ bgcolor: "transparent", color: "#000", zIndex: 999 }}
+      sx={{
+        color: "#000 !important",
+        bgcolor: "#fff !important",
+        zIndex: 999,
+      }}
     >
       <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
         <Typography
@@ -23,13 +34,26 @@ export default function Navbar() {
           to="/"
           sx={{ color: "inherit", textDecoration: "none" }}
         >
-          TT
+          Hospeda Nest
         </Typography>
 
-        <Stack direction="horizontal" spacing={4}>
-          <Button color="inherit">Login</Button>
-          <Button color="inherit">Dashboard</Button>
-          <IconButton>
+        <Stack direction="row" spacing={2}>
+          {pages
+            .filter(({ name }) => name.toLowerCase() != page)
+            .map((p, i) => (
+              <Button
+                key={p.name}
+                variant={i == 1 ? "outlined" : "text"}
+                sx={{
+                  border: i == 1 ? "1.5px solid #333" : "text",
+                }}
+                color="inherit"
+                onClick={() => navigate(p.path)}
+              >
+                {p.name}
+              </Button>
+            ))}
+          <IconButton color="inherit">
             <Search />
           </IconButton>
         </Stack>

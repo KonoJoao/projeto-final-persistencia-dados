@@ -38,7 +38,7 @@ const meses = [
 
 const CustomTextField = styled(TextField)(({ disableElevation }) => ({
   "& .MuiOutlinedInput-root": {
-    backgroundColor: disableElevation ? "transparent" : "rgba(0, 0, 0, 0.1)",
+    backgroundColor: disableElevation ? "transparent" : "rgba(0, 0, 0, 0.05)",
     borderRadius: 8,
     border: "none",
     color: "#000 !important",

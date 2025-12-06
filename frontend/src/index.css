@@ -38,6 +38,6 @@ button:not(.MuiIconButton-root):not(.MuiButton-sizeLarge) {
   padding: 5px 20px !important;
 }
 
-button {
+button:not(.MuiTab-root):not(.MuiCardActionArea-root) {
   border-radius: 50px !important;
 }

@@ -20,8 +20,8 @@ const API_URL = "http://localhost:3001/users";
 export default function Login({ page }) {
   const navigate = useNavigate();
   const [loginForm, setLoginForm] = useState({
-    identifier: "",
-    senha: "",
+    identifier: "joao@example.com",
+    senha: "senha123",
   });
   const [registerForm, setRegisterForm] = useState({
     login: "",
@@ -59,7 +59,10 @@ export default function Login({ page }) {
       if (response.data.access_token) {
         localStorage.setItem("token", response.data.access_token);
         showSnackbar("Login realizado com sucesso!");
-        setTimeout(() => navigate("/manager/attractions"), 1500);
+        setTimeout(() => {
+          navigate("/dashboard/pontos-turisticos");
+          setLoading(false);
+        }, 1500);
       }
     } catch (error) {
       const message =
@@ -79,15 +82,16 @@ export default function Login({ page }) {
       if (response.data.access_token) {
         localStorage.setItem("token", response.data.access_token);
         showSnackbar("Cadastro realizado com sucesso!");
-        setTimeout(() => navigate("/manager/attractions"), 1500);
+        setTimeout(() => {
+          navigate("/dashboard/pontos-turisticos");
+          setLoading(false);
+        }, 1500);
       }
     } catch (error) {
       const message =
         error.response?.data?.message ||
         "Erro ao fazer cadastro. Tente novamente.";
       showSnackbar(message, "error");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -114,15 +118,15 @@ export default function Login({ page }) {
       >
         <Box
           className="show-box-outlined"
-          sx={{ minWidth: { xs: "90%", sm: "400px" } }}
+          sx={{ minWidth: { xs: "90%", md: "350px" } }}
         >
           {page === "login" ? (
-            <Stack spacing={3} sx={{ p: "16px 24px", pb: 4 }}>
+            <Stack spacing={3} sx={{ p: "36px 24px", pb: 4 }}>
               <Typography variant="h6" sx={{ textAlign: "center", pb: 4 }}>
                 Acesse sua conta
               </Typography>
               <CustomInput
-                label="Email ou Login"
+                placeholder="Email ou Login"
                 fullWidth
                 value={loginForm.identifier}
                 onChange={(e) =>
@@ -130,7 +134,7 @@ export default function Login({ page }) {
                 }
               />
               <CustomInput
-                label="Senha"
+                placeholder="Senha"
                 type="password"
                 fullWidth
                 value={loginForm.senha}

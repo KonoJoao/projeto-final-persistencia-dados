@@ -21,11 +21,13 @@ import {
   Add,
   Close,
   Comment,
+  Star,
 } from "@mui/icons-material";
 import { CustomInput, LoadingBox } from "../../../Components/Custom";
 import { Modal } from "../../../Components/Modal";
 import ImageUploader from "../../../Components/ImageUploader";
 import ComentariosManager from "./comentarios";
+import AvaliacoesManager from "./avaliacoes";
 import axios from "axios";
 
 const API_URL = "http://localhost:3001/pontos-turisticos";
@@ -40,6 +42,7 @@ export default function PontosTuristicos() {
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [openDeletePhotoModal, setOpenDeletePhotoModal] = useState(false);
   const [openComentariosModal, setOpenComentariosModal] = useState(false);
+  const [openAvaliacoesModal, setOpenAvaliacoesModal] = useState(false);
   const [selectedAttraction, setSelectedAttraction] = useState(null);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -165,7 +168,6 @@ export default function PontosTuristicos() {
 
   const handleClosePhotoModal = () => {
     setOpenPhotoModal(false);
-    setPhotos([]);
   };
 
   const handleOpenEditModal = (attraction) => {
@@ -205,7 +207,6 @@ export default function PontosTuristicos() {
 
   const handleCloseDeleteModal = () => {
     setOpenDeleteModal(false);
-    setSelectedAttraction(null);
   };
 
   const handleOpenComentariosModal = (attraction) => {
@@ -215,7 +216,15 @@ export default function PontosTuristicos() {
 
   const handleCloseComentariosModal = () => {
     setOpenComentariosModal(false);
-    setSelectedAttraction(null);
+  };
+
+  const handleOpenAvaliacoesModal = (attraction) => {
+    setSelectedAttraction(attraction);
+    setOpenAvaliacoesModal(true);
+  };
+
+  const handleCloseAvaliacoesModal = () => {
+    setOpenAvaliacoesModal(false);
   };
 
   const resetForm = () => {
@@ -241,8 +250,8 @@ export default function PontosTuristicos() {
       const token = localStorage.getItem("token");
       const payload = {
         ...formData,
-        latitude: parseFloat(formData.latitude) || 0,
-        longitude: parseFloat(formData.longitude) || 0,
+        latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+        longitude: formData.longitude ? parseFloat(formData.longitude) : null,
       };
       await axios.post(API_URL, payload, {
         headers: {
@@ -267,8 +276,8 @@ export default function PontosTuristicos() {
       const token = localStorage.getItem("token");
       const payload = {
         ...formData,
-        latitude: parseFloat(formData.latitude) || 0,
-        longitude: parseFloat(formData.longitude) || 0,
+        latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+        longitude: formData.longitude ? parseFloat(formData.longitude) : null,
       };
       await axios.patch(`${API_URL}/${selectedAttraction.id}`, payload, {
         headers: {
@@ -313,23 +322,27 @@ export default function PontosTuristicos() {
   const columns = [
     { field: "nome", headerName: "Nome", flex: 1, minWidth: 200 },
     {
-      field: "cidadeEstado",
-      headerName: "Cidade/Estado",
+      field: "cidade",
+      headerName: "Cidade",
       flex: 1,
-      minWidth: 150,
-      valueGetter: (value, row) => `${row.cidade}/${row.estado}`,
+      minWidth: 100,
+    },
+    {
+      field: "estado",
+      headerName: "Estado",
+      flex: 1,
+      minWidth: 100,
     },
     {
       field: "descricao",
       headerName: "Descrição",
       flex: 2,
       minWidth: 250,
-      renderCell: (params) => params.row.descricao?.substring(0, 100) + "...",
     },
     {
       field: "acoes",
       headerName: "Ações",
-      width: 200,
+      width: 250,
       sortable: false,
       filterable: false,
       renderCell: (params) => (
@@ -338,33 +351,45 @@ export default function PontosTuristicos() {
             <IconButton
               onClick={() => handleOpenComentariosModal(params.row)}
               size="small"
-              color="primary"
+              color="info"
             >
-              <Comment />
+              <Comment fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Ver avaliações" arrow>
+            <IconButton
+              onClick={() => handleOpenAvaliacoesModal(params.row)}
+              size="small"
+              color="warning"
+            >
+              <Star fontSize="small" />
             </IconButton>
           </Tooltip>
           <Tooltip title="Ver fotos" arrow>
             <IconButton
               onClick={() => handleOpenPhotoModal(params.row)}
               size="small"
+              color="default"
             >
-              <PhotoCamera />
+              <PhotoCamera fontSize="small" />
             </IconButton>
           </Tooltip>
           <Tooltip title="Editar" arrow>
             <IconButton
               onClick={() => handleOpenEditModal(params.row)}
               size="small"
+              color="primary"
             >
-              <Edit />
+              <Edit fontSize="small" />
             </IconButton>
           </Tooltip>
           <Tooltip title="Excluir" arrow>
             <IconButton
               onClick={() => handleOpenDeleteModal(params.row)}
               size="small"
+              color="error"
             >
-              <Close />
+              <Close fontSize="small" />
             </IconButton>
           </Tooltip>
         </Box>
@@ -384,7 +409,7 @@ export default function PontosTuristicos() {
   });
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box>
       {/* Filtros */}
       <Box
         sx={{
@@ -651,6 +676,8 @@ export default function PontosTuristicos() {
               type="number"
               value={formData.latitude}
               onChange={handleInputChange("latitude")}
+              inputProps={{ step: "any" }}
+              helperText="Ex: -23.550520"
             />
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
@@ -660,6 +687,8 @@ export default function PontosTuristicos() {
               type="number"
               value={formData.longitude}
               onChange={handleInputChange("longitude")}
+              inputProps={{ step: "any" }}
+              helperText="Ex: -46.633308"
             />
           </Grid>
           <Grid size={12}>
@@ -744,6 +773,8 @@ export default function PontosTuristicos() {
               type="number"
               value={formData.latitude}
               onChange={handleInputChange("latitude")}
+              inputProps={{ step: "any" }}
+              helperText="Ex: -23.550520"
             />
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
@@ -753,6 +784,8 @@ export default function PontosTuristicos() {
               type="number"
               value={formData.longitude}
               onChange={handleInputChange("longitude")}
+              inputProps={{ step: "any" }}
+              helperText="Ex: -46.633308"
             />
           </Grid>
           <Grid size={12}>
@@ -834,18 +867,39 @@ export default function PontosTuristicos() {
         open={openComentariosModal}
         onClose={handleCloseComentariosModal}
         maxWidth="lg"
-        titulo="Gerenciar Comentários"
+        titulo={`Comentários - ${selectedAttraction?.nome || ""}`}
         buttons={[
           {
             title: "Fechar",
-            variant: "outlined",
+            variant: "contained",
             action: handleCloseComentariosModal,
-            color: "primary",
           },
         ]}
       >
         {selectedAttraction && (
           <ComentariosManager
+            pontoId={selectedAttraction.id}
+            pontoNome={selectedAttraction.nome}
+          />
+        )}
+      </Modal>
+
+      {/* Modal de Avaliações */}
+      <Modal
+        open={openAvaliacoesModal}
+        onClose={handleCloseAvaliacoesModal}
+        maxWidth="lg"
+        titulo={`Avaliações - ${selectedAttraction?.nome || ""}`}
+        buttons={[
+          {
+            title: "Fechar",
+            variant: "contained",
+            action: handleCloseAvaliacoesModal,
+          },
+        ]}
+      >
+        {selectedAttraction && (
+          <AvaliacoesManager
             pontoId={selectedAttraction.id}
             pontoNome={selectedAttraction.nome}
           />
