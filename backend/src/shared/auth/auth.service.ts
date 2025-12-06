@@ -24,9 +24,9 @@ export class AuthService {
     }
 
     try {
-      const payload = (await this.jwtService.verifyAsync(token, {
+      const payload = await this.jwtService.verifyAsync(token, {
         secret: jwtConstants.secret,
-      })) as { sub: number; username: string };
+      });
 
       return {
         id: payload.sub,

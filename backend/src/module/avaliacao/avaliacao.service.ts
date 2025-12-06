@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -10,6 +11,7 @@ import { Avaliacao } from '../../shared/database/entities/avaliacao.entity';
 import { PontoTuristico } from '../../shared/database/entities/ponto-turistico.entity';
 import { CreateAvaliacaoDto } from './dto/create-avaliacao.dto';
 import { UpdateAvaliacaoDto } from './dto/update-avaliacao.dto';
+import { AuthService } from 'src/shared/auth';
 
 @Injectable()
 export class AvaliacaoService {
@@ -18,12 +20,17 @@ export class AvaliacaoService {
     private avaliacaoRepository: Repository<Avaliacao>,
     @InjectRepository(PontoTuristico)
     private pontoTuristicoRepository: Repository<PontoTuristico>,
+    @Inject()
+    private authService: AuthService,
   ) {}
 
   async create(
     createAvaliacaoDto: CreateAvaliacaoDto,
-    userId: string,
+    req: any,
   ): Promise<Avaliacao> {
+    const user = await this.authService.extractUserFromAuthHeader(req);
+    const userId = user.id;
+
     // Verificar se o ponto turístico existe
     const ponto = await this.pontoTuristicoRepository.findOne({
       where: { id: createAvaliacaoDto.ponto_id },
@@ -37,7 +44,7 @@ export class AvaliacaoService {
     const avaliacaoExistente = await this.avaliacaoRepository.findOne({
       where: {
         ponto_id: createAvaliacaoDto.ponto_id,
-        usuario_id: userId,
+        usuario_id: String(userId),
       },
     });
 
@@ -49,7 +56,7 @@ export class AvaliacaoService {
 
     const novaAvaliacao = this.avaliacaoRepository.create({
       ...createAvaliacaoDto,
-      usuario_id: userId,
+      usuario_id: String(userId),
     });
 
     return await this.avaliacaoRepository.save(novaAvaliacao);
@@ -138,12 +145,15 @@ export class AvaliacaoService {
   async update(
     id: string,
     updateAvaliacaoDto: UpdateAvaliacaoDto,
-    userId: string,
+    req: any,
   ): Promise<Avaliacao> {
+    const user = await this.authService.extractUserFromAuthHeader(req);
+    const userId = user.id;
+
     const avaliacao = await this.findOne(id);
 
     // Verificar se o usuário é o autor da avaliação
-    if (avaliacao.usuario_id !== userId) {
+    if (avaliacao.usuario_id !== String(userId)) {
       throw new ForbiddenException(
         'Você não tem permissão para editar esta avaliação',
       );
@@ -153,11 +163,14 @@ export class AvaliacaoService {
     return await this.avaliacaoRepository.save(avaliacao);
   }
 
-  async remove(id: string, userId: string): Promise<void> {
+  async remove(id: string, req: any): Promise<void> {
+    const user = await this.authService.extractUserFromAuthHeader(req);
+    const userId = user.id;
+
     const avaliacao = await this.findOne(id);
 
     // Verificar se o usuário é o autor da avaliação
-    if (avaliacao.usuario_id !== userId) {
+    if (avaliacao.usuario_id !== String(userId)) {
       throw new ForbiddenException(
         'Você não tem permissão para deletar esta avaliação',
       );

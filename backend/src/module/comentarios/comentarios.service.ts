@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Inject,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -14,6 +15,9 @@ import {
 import { PontoTuristico } from '../../shared/database/entities/ponto-turistico.entity';
 import { CreateComentarioDto } from './dto/create-comentario.dto';
 import { UpdateComentarioDto } from './dto/update-comentario.dto';
+import { UserService } from '../user/user.service';
+import { UserRole } from 'src/shared/database/entities/usuario.entity';
+import { AuthService } from 'src/shared/auth';
 
 @Injectable()
 export class ComentariosService {
@@ -22,13 +26,19 @@ export class ComentariosService {
     private comentariosModel: Model<ComentariosDocument>,
     @InjectRepository(PontoTuristico)
     private pontoTuristicoRepository: Repository<PontoTuristico>,
+    @Inject()
+    private usuarioService: UserService,
+    @Inject()
+    private authService: AuthService,
   ) {}
 
   async create(
     createComentarioDto: CreateComentarioDto,
-    userId: string,
+    req: any,
   ): Promise<ComentariosDocument> {
-    // Verificar se o ponto turístico existe
+    const user = await this.authService.extractUserFromAuthHeader(req);
+    const userId = user.id;
+
     const ponto = await this.pontoTuristicoRepository.findOne({
       where: { id: createComentarioDto.pontoId },
     });
@@ -76,12 +86,15 @@ export class ComentariosService {
   async update(
     id: string,
     updateComentarioDto: UpdateComentarioDto,
-    userId: string,
+    req: any,
   ): Promise<ComentariosDocument> {
+    const user = await this.authService.extractUserFromAuthHeader(req);
+    const userId = user.id;
+
     const comentario = await this.findOne(id);
 
     // Verificar se o usuário é o autor do comentário
-    if (comentario.usuarioId !== userId) {
+    if (comentario.usuarioId !== String(userId)) {
       throw new ForbiddenException(
         'Você não tem permissão para editar este comentário',
       );
@@ -91,11 +104,14 @@ export class ComentariosService {
     return await comentario.save();
   }
 
-  async remove(id: string, userId: string): Promise<void> {
-    const comentario = await this.findOne(id);
+  async remove(id: string, req: any): Promise<void> {
+    await this.findOne(id);
 
-    // Verificar se o usuário é o autor do comentário
-    if (comentario.usuarioId !== userId) {
+    const userId = await this.authService.extractUserFromAuthHeader(req);
+
+    const adminUser = await this.usuarioService.findById(String(userId.id));
+
+    if (!adminUser || adminUser.role !== UserRole.ADMIN) {
       throw new ForbiddenException(
         'Você não tem permissão para deletar este comentário',
       );
@@ -111,12 +127,15 @@ export class ComentariosService {
   async addResposta(
     comentarioId: string,
     texto: string,
-    userId: string,
+    req: any,
   ): Promise<ComentariosDocument> {
+    const user = await this.authService.extractUserFromAuthHeader(req);
+    const userId = user.id;
+
     const comentario = await this.findOne(comentarioId);
 
     const novaResposta = {
-      usuarioId: userId,
+      usuarioId: String(userId),
       texto,
       data: new Date(),
     };

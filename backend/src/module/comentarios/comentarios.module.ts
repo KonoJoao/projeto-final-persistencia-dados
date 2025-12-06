@@ -9,9 +9,13 @@ import {
 } from '../../shared/database/schema/comentarios.schema';
 import { PontoTuristico } from '../../shared/database/entities/ponto-turistico.entity';
 import { Usuario } from 'src/shared/database/entities/usuario.entity';
+import { UserModule } from '../user/user.module';
+import { AuthModule } from 'src/shared/auth/auth.module';
 
 @Module({
   imports: [
+    UserModule,
+    AuthModule,
     MongooseModule.forFeature([
       { name: Comentarios.name, schema: ComentariosSchema },
     ]),

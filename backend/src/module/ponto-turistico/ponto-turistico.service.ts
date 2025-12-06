@@ -2,24 +2,31 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Not, Repository } from 'typeorm';
 import { PontoTuristico } from '../../shared/database/entities/ponto-turistico.entity';
 import { CreatePontoTuristicoDto } from './dto/create-ponto-turistico.dto';
 import { UpdatePontoTuristicoDto } from './dto/update-ponto-turistico.dto';
+import { AuthService } from 'src/shared/auth';
 
 @Injectable()
 export class PontoTuristicoService {
   constructor(
     @InjectRepository(PontoTuristico)
     private pontoTuristicoRepository: Repository<PontoTuristico>,
+    @Inject()
+    private authService: AuthService,
   ) {}
 
   async create(
     createPontoTuristicoDto: CreatePontoTuristicoDto,
-    userId: string,
+    req: any,
   ): Promise<PontoTuristico> {
+    const user = await this.authService.extractUserFromAuthHeader(req);
+    const userId = user.id;
+
     await this.verificarSeExisteNomeDePontoNaCidade(
       createPontoTuristicoDto.nome,
       createPontoTuristicoDto.cidade,
@@ -27,7 +34,7 @@ export class PontoTuristicoService {
 
     const novoPonto = this.pontoTuristicoRepository.create({
       ...createPontoTuristicoDto,
-      criado_por: userId,
+      criado_por: String(userId),
     });
 
     return await this.pontoTuristicoRepository.save(novoPonto);
@@ -98,12 +105,15 @@ export class PontoTuristicoService {
   async update(
     id: string,
     updatePontoTuristicoDto: UpdatePontoTuristicoDto,
-    userId: string,
+    req: any,
   ): Promise<PontoTuristico> {
+    const user = await this.authService.extractUserFromAuthHeader(req);
+    const userId = user.id;
+
     const ponto = await this.findOne(id);
 
     // Verificar se o usuário é o criador
-    if (ponto.criado_por !== userId) {
+    if (ponto.criado_por !== String(userId)) {
       throw new ForbiddenException(
         'Você não tem permissão para editar este ponto turístico',
       );
@@ -133,11 +143,14 @@ export class PontoTuristicoService {
     }
   }
 
-  async remove(id: string, userId: string): Promise<void> {
+  async remove(id: string, req: any): Promise<void> {
+    const user = await this.authService.extractUserFromAuthHeader(req);
+    const userId = user.id;
+
     const ponto = await this.findOne(id);
 
     // Verificar se o usuário é o criador
-    if (ponto.criado_por !== userId) {
+    if (ponto.criado_por !== String(userId)) {
       throw new ForbiddenException(
         'Você não tem permissão para deletar este ponto turístico',
       );

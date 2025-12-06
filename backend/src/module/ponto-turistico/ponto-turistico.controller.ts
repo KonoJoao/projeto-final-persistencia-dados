@@ -45,12 +45,9 @@ export class PontoTuristicoController {
   })
   create(
     @Body() createPontoTuristicoDto: CreatePontoTuristicoDto,
-    @Request() req: { user: { sub: string } },
+    @Request() req,
   ) {
-    return this.pontoTuristicoService.create(
-      createPontoTuristicoDto,
-      req.user.sub,
-    );
+    return this.pontoTuristicoService.create(createPontoTuristicoDto, req);
   }
 
   @Get()
@@ -147,13 +144,9 @@ export class PontoTuristicoController {
   update(
     @Param('id') id: string,
     @Body() updatePontoTuristicoDto: UpdatePontoTuristicoDto,
-    @Request() req: { user: { sub: string } },
+    @Request() req,
   ) {
-    return this.pontoTuristicoService.update(
-      id,
-      updatePontoTuristicoDto,
-      req.user.sub,
-    );
+    return this.pontoTuristicoService.update(id, updatePontoTuristicoDto, req);
   }
 
   @Delete(':id')
@@ -182,7 +175,7 @@ export class PontoTuristicoController {
     status: 404,
     description: 'Ponto turístico não encontrado',
   })
-  remove(@Param('id') id: string, @Request() req: { user: { sub: string } }) {
-    return this.pontoTuristicoService.remove(id, req.user.sub);
+  remove(@Param('id') id: string, @Request() req) {
+    return this.pontoTuristicoService.remove(id, req);
   }
 }

@@ -93,7 +93,7 @@ export class FotosController {
   async uploadFotos(
     @UploadedFiles() files: Express.Multer.File[],
     @Body() uploadFotosDto: UploadFotosDto,
-    @Request() req: { user: { sub: string } },
+    @Request() req,
   ) {
     if (!files || files.length === 0) {
       throw new BadRequestException('Nenhum arquivo foi enviado');
@@ -101,7 +101,7 @@ export class FotosController {
 
     return await this.fotosService.uploadFotos(
       uploadFotosDto.pontoId,
-      req.user.sub,
+      req,
       files,
       uploadFotosDto.titulo,
       uploadFotosDto.descricao,
@@ -216,10 +216,7 @@ export class FotosController {
     status: 404,
     description: 'Foto não encontrada',
   })
-  async remove(
-    @Param('id') id: string,
-    @Request() req: { user: { sub: string } },
-  ) {
-    return await this.fotosService.remove(id, req.user.sub);
+  async remove(@Param('id') id: string, @Request() req) {
+    return await this.fotosService.remove(id, req);
   }
 }

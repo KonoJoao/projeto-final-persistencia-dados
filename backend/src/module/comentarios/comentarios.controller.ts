@@ -52,11 +52,8 @@ export class ComentariosController {
     status: 404,
     description: 'Ponto turístico não encontrado',
   })
-  create(
-    @Body() createComentarioDto: CreateComentarioDto,
-    @Request() req: { user: { sub: string } },
-  ) {
-    return this.comentariosService.create(createComentarioDto, req.user.sub);
+  create(@Body() createComentarioDto: CreateComentarioDto, @Request() req) {
+    return this.comentariosService.create(createComentarioDto, req);
   }
 
   @Get()
@@ -165,13 +162,9 @@ export class ComentariosController {
   update(
     @Param('id') id: string,
     @Body() updateComentarioDto: UpdateComentarioDto,
-    @Request() req: { user: { sub: string } },
+    @Request() req,
   ) {
-    return this.comentariosService.update(
-      id,
-      updateComentarioDto,
-      req.user.sub,
-    );
+    return this.comentariosService.update(id, updateComentarioDto, req);
   }
 
   @Delete(':id')
@@ -200,8 +193,8 @@ export class ComentariosController {
     status: 404,
     description: 'Comentário não encontrado',
   })
-  remove(@Param('id') id: string, @Request() req: { user: { sub: string } }) {
-    return this.comentariosService.remove(id, req.user.sub);
+  remove(@Param('id') id: string, @Request() req) {
+    return this.comentariosService.remove(id, req);
   }
 
   @Post(':id/respostas')
@@ -229,12 +222,8 @@ export class ComentariosController {
   addResposta(
     @Param('id') id: string,
     @Body() addRespostaDto: AddRespostaDto,
-    @Request() req: { user: { sub: string } },
+    @Request() req,
   ) {
-    return this.comentariosService.addResposta(
-      id,
-      addRespostaDto.texto,
-      req.user.sub,
-    );
+    return this.comentariosService.addResposta(id, addRespostaDto.texto, req);
   }
 }

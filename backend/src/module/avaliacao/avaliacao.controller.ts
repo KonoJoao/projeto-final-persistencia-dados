@@ -51,11 +51,8 @@ export class AvaliacaoController {
     status: 404,
     description: 'Ponto turístico não encontrado',
   })
-  create(
-    @Body() createAvaliacaoDto: CreateAvaliacaoDto,
-    @Request() req: { user: { sub: string } },
-  ) {
-    return this.avaliacaoService.create(createAvaliacaoDto, req.user.sub);
+  create(@Body() createAvaliacaoDto: CreateAvaliacaoDto, @Request() req) {
+    return this.avaliacaoService.create(createAvaliacaoDto, req);
   }
 
   @Get()
@@ -159,9 +156,9 @@ export class AvaliacaoController {
   update(
     @Param('id') id: string,
     @Body() updateAvaliacaoDto: UpdateAvaliacaoDto,
-    @Request() req: { user: { sub: string } },
+    @Request() req,
   ) {
-    return this.avaliacaoService.update(id, updateAvaliacaoDto, req.user.sub);
+    return this.avaliacaoService.update(id, updateAvaliacaoDto, req);
   }
 
   @Delete(':id')
@@ -190,7 +187,7 @@ export class AvaliacaoController {
     status: 404,
     description: 'Avaliação não encontrada',
   })
-  remove(@Param('id') id: string, @Request() req: { user: { sub: string } }) {
-    return this.avaliacaoService.remove(id, req.user.sub);
+  remove(@Param('id') id: string, @Request() req) {
+    return this.avaliacaoService.remove(id, req);
   }
 }

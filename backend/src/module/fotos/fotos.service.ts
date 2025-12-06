@@ -3,6 +3,7 @@ import {
   BadRequestException,
   NotFoundException,
   ForbiddenException,
+  Inject,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -16,6 +17,7 @@ import { PontoTuristico } from '../../shared/database/entities/ponto-turistico.e
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { AuthService } from 'src/shared/auth';
 
 @Injectable()
 export class FotosService {
@@ -26,6 +28,8 @@ export class FotosService {
     @InjectModel(Fotos.name) private fotosModel: Model<FotosDocument>,
     @InjectRepository(PontoTuristico)
     private pontoTuristicoRepository: Repository<PontoTuristico>,
+    @Inject()
+    private authService: AuthService,
   ) {
     void this.ensureUploadDirExists();
   }
@@ -40,11 +44,14 @@ export class FotosService {
 
   async uploadFotos(
     pontoId: string,
-    userId: string,
+    req: any,
     files: Express.Multer.File[],
     titulo?: string,
     descricao?: string,
   ): Promise<FotosDocument[]> {
+    const user = await this.authService.extractUserFromAuthHeader(req);
+    const userId = user.id;
+
     // Verificar se o ponto turístico existe
     const ponto = await this.pontoTuristicoRepository.findOne({
       where: { id: pontoId },
@@ -126,11 +133,14 @@ export class FotosService {
     return foto;
   }
 
-  async remove(id: string, userId: string): Promise<void> {
+  async remove(id: string, req: any): Promise<void> {
+    const user = await this.authService.extractUserFromAuthHeader(req);
+    const userId = user.id;
+
     const foto = await this.findOne(id);
 
     // Verificar se o usuário é o dono da foto
-    if (foto.usuarioId !== userId) {
+    if (foto.usuarioId !== String(userId)) {
       throw new ForbiddenException(
         'Você não tem permissão para deletar esta foto',
       );
