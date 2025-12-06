@@ -23,6 +23,7 @@ import {
 import { ComentariosService } from './comentarios.service';
 import { CreateComentarioDto } from './dto/create-comentario.dto';
 import { UpdateComentarioDto } from './dto/update-comentario.dto';
+import { AddRespostaDto } from './dto/add-resposta.dto';
 import { AuthGuard } from '../../shared/auth/auth.guard';
 
 @ApiTags('comentarios')
@@ -201,5 +202,39 @@ export class ComentariosController {
   })
   remove(@Param('id') id: string, @Request() req: { user: { sub: string } }) {
     return this.comentariosService.remove(id, req.user.sub);
+  }
+
+  @Post(':id/respostas')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Adicionar resposta a um comentário' })
+  @ApiParam({
+    name: 'id',
+    description: 'ID do comentário',
+    type: 'string',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Resposta adicionada com sucesso',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Não autorizado',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Comentário não encontrado',
+  })
+  addResposta(
+    @Param('id') id: string,
+    @Body() addRespostaDto: AddRespostaDto,
+    @Request() req: { user: { sub: string } },
+  ) {
+    return this.comentariosService.addResposta(
+      id,
+      addRespostaDto.texto,
+      req.user.sub,
+    );
   }
 }

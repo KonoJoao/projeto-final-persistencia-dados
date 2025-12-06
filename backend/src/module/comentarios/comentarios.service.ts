@@ -107,4 +107,21 @@ export class ComentariosService {
   async countByPontoTuristico(pontoId: string): Promise<number> {
     return await this.comentariosModel.countDocuments({ pontoId });
   }
+
+  async addResposta(
+    comentarioId: string,
+    texto: string,
+    userId: string,
+  ): Promise<ComentariosDocument> {
+    const comentario = await this.findOne(comentarioId);
+
+    const novaResposta = {
+      usuarioId: userId,
+      texto,
+      data: new Date(),
+    };
+
+    comentario.respostas.push(novaResposta);
+    return await comentario.save();
+  }
 }

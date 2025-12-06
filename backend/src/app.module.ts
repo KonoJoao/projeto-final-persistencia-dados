@@ -9,6 +9,7 @@ import { PontoTuristicoModule } from './module/ponto-turistico/ponto-turistico.m
 import { AvaliacaoModule } from './module/avaliacao/avaliacao.module';
 import { FotosModule } from './module/fotos/fotos.module';
 import { ComentariosModule } from './module/comentarios/comentarios.module';
+import { HospedagemModule } from './module/hospedagem/hospedagem.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ComentariosModule } from './module/comentarios/comentarios.module';
     AvaliacaoModule,
     FotosModule,
     ComentariosModule,
+    HospedagemModule,
   ],
   controllers: [AppController],
   providers: [AppService],
