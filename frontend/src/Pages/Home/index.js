@@ -26,6 +26,7 @@ const API_URL = "http://localhost:3001/pontos-turisticos";
 const FOTOS_API_URL = "http://localhost:3001/fotos";
 const AVALIACOES_API_URL = "http://localhost:3001/avaliacoes";
 const COMENTARIOS_API_URL = "http://localhost:3001/comentarios";
+const HOSPEDAGENS_API_URL = "http://localhost:3001/hospedagens";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -52,6 +53,7 @@ export default function Home() {
     fotos: [],
     avaliacoes: [],
     comentarios: [],
+    hospedagens: [],
   });
   const [loadingDetalhes, setLoadingDetalhes] = useState(false);
 
@@ -110,16 +112,19 @@ export default function Home() {
   const fetchPontoDetalhes = async (pontoId) => {
     try {
       setLoadingDetalhes(true);
-      const [fotosRes, avaliacoesRes, comentariosRes] = await Promise.all([
-        axios.get(`${FOTOS_API_URL}/ponto/${pontoId}`),
-        axios.get(`${AVALIACOES_API_URL}?ponto_id=${pontoId}`),
-        axios.get(`${COMENTARIOS_API_URL}?ponto_id=${pontoId}`),
-      ]);
+      const [fotosRes, avaliacoesRes, comentariosRes, hospedagensRes] =
+        await Promise.all([
+          axios.get(`${FOTOS_API_URL}/ponto/${pontoId}`),
+          axios.get(`${AVALIACOES_API_URL}?ponto_id=${pontoId}`),
+          axios.get(`${COMENTARIOS_API_URL}?pontoId=${pontoId}`),
+          axios.get(`${HOSPEDAGENS_API_URL}/ponto/${pontoId}`),
+        ]);
 
       setPontoDetalhes({
         fotos: fotosRes.data,
         avaliacoes: avaliacoesRes.data,
         comentarios: comentariosRes.data,
+        hospedagens: hospedagensRes.data.data || hospedagensRes.data, // Trata resposta paginada
       });
     } catch (error) {
       console.error("Erro ao buscar detalhes:", error);
@@ -162,7 +167,12 @@ export default function Home() {
   const handleCloseDetalhes = () => {
     handleCloseModal("detalhes");
     setSelectedPonto(null);
-    setPontoDetalhes({ fotos: [], avaliacoes: [], comentarios: [] });
+    setPontoDetalhes({
+      fotos: [],
+      avaliacoes: [],
+      comentarios: [],
+      hospedagens: [],
+    });
   };
 
   const calcularMediaAvaliacoes = (avaliacoes) => {

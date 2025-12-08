@@ -34,10 +34,11 @@ a {
   background-color: #0195f7 !important;
 }
 
-button:not(.MuiIconButton-root):not(.MuiButton-sizeLarge) {
+button:not(.MuiIconButton-root):not(.MuiCardActionArea-root) {
   padding: 5px 20px !important;
 }
 
-button:not(.MuiTab-root):not(.MuiCardActionArea-root) {
+button:not(.MuiTab-root):not(.MuiCardActionArea-root),
+.MuiButtonBase-root {
   border-radius: 50px !important;
 }

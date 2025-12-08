@@ -62,7 +62,6 @@ export default function AvaliacoesManager({ pontoId, pontoNome }) {
 
   const handleCloseDeleteModal = () => {
     setOpenDeleteModal(false);
-    setSelectedAvaliacao(null);
   };
 
   const handleDelete = async () => {
@@ -182,15 +181,16 @@ export default function AvaliacoesManager({ pontoId, pontoNome }) {
             display: "flex",
             alignItems: "center",
             gap: 2,
+            borderRadius: "10px",
           }}
         >
           <Star sx={{ fontSize: 40, color: "primary.main" }} />
           <Box>
             <Typography variant="h4" fontWeight="bold">
-              {calcularMediaNotas()}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Média de avaliações
+              {calcularMediaNotas()}{" "}
+              <Typography variant="body2" color="text.secondary">
+                Média de avaliações
+              </Typography>
             </Typography>
           </Box>
         </Paper>
@@ -200,13 +200,14 @@ export default function AvaliacoesManager({ pontoId, pontoNome }) {
             p: 2,
             border: "1px solid",
             borderColor: "grey.300",
+            borderRadius: "10px",
           }}
         >
           <Typography variant="h4" fontWeight="bold">
-            {avaliacoes.length}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Total de avaliações
+            {avaliacoes.length}{" "}
+            <Typography variant="body2" color="text.secondary">
+              Total de avaliações
+            </Typography>
           </Typography>
         </Paper>
       </Box>

@@ -109,10 +109,13 @@ export const Rows = ({
                               }
                             : {
                                 border: "1px solid rgb(134, 134, 134)",
-                                background: "rgba(256,256,256,0.05)",
+                                background: "rgba(0,0,0,0.1)",
                               }),
                         }
-                      : { border: "1px solid transparent" }),
+                      : {
+                          border: "1px solid transparent",
+                          background: "rgba(0,0,0,0.05)",
+                        }),
                     position: "relative",
                   }}
                 >

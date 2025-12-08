@@ -59,6 +59,17 @@ export default function ComentariosManager({ pontoId, pontoNome }) {
     setSnackbar({ ...snackbar, open: false });
   };
 
+  const handleOpenReplyModal = (comentario) => {
+    setSelectedComentario(comentario);
+    setReplyText("");
+    setOpenReplyModal(true);
+  };
+
+  const handleCloseReplyModal = () => {
+    setOpenReplyModal(false);
+    setSelectedComentario(null);
+  };
+
   const handleOpenDeleteModal = (comentario) => {
     setSelectedComentario(comentario);
     setOpenDeleteModal(true);
@@ -67,18 +78,6 @@ export default function ComentariosManager({ pontoId, pontoNome }) {
   const handleCloseDeleteModal = () => {
     setOpenDeleteModal(false);
     setSelectedComentario(null);
-  };
-
-  const handleOpenReplyModal = (comentario) => {
-    setSelectedComentario(comentario);
-    setReplyText(comentario.resposta || "");
-    setOpenReplyModal(true);
-  };
-
-  const handleCloseReplyModal = () => {
-    setOpenReplyModal(false);
-    setSelectedComentario(null);
-    setReplyText("");
   };
 
   const handleToggleExpand = (id) => {

@@ -1,4 +1,4 @@
-import React, { useState, memo } from "react";
+import React, { useState, memo, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -17,6 +17,13 @@ import {
   Collapse,
   Alert,
   Snackbar,
+  CardContent,
+  Pagination,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import {
   Directions,
@@ -30,13 +37,17 @@ import {
   ExpandMore,
   ExpandLess,
   Map,
+  Hotel,
 } from "@mui/icons-material";
 import { Modal } from "../../Components/Modal";
-import { LoadingBox, CustomInput } from "../../Components/Custom";
+import { LoadingBox, CustomInput, CustomSelect } from "../../Components/Custom";
 import axios from "axios";
+import { Rows } from "../../Components/List/Rows";
+import { useNavigate } from "react-router-dom";
 
 const FOTOS_API_URL = "http://localhost:3001/fotos";
 const COMENTARIOS_API_URL = "http://localhost:3001/comentarios";
+const HOSPEDAGENS_API_URL = "http://localhost:3001/hospedagens";
 
 const DetalhesModal = memo(function DetalhesModal({
   open,
@@ -46,6 +57,7 @@ const DetalhesModal = memo(function DetalhesModal({
   loading,
   onComentarioAdicionado,
 }) {
+  const navigate = useNavigate();
   const [tabValue, setTabValue] = useState(0);
   const [novoComentario, setNovoComentario] = useState("");
   const [respostas, setRespostas] = useState({});
@@ -58,7 +70,22 @@ const DetalhesModal = memo(function DetalhesModal({
     severity: "success",
   });
 
-  if (!ponto) return null;
+  // Estados para hospedagens com busca da API
+  const [hospedagens, setHospedagens] = useState([]);
+  const [loadingHospedagens, setLoadingHospedagens] = useState(false);
+  const [openHospedagemModal, setOpenHospedagemModal] = useState(false);
+  const [selectedHospedagem, setSelectedHospedagem] = useState(null);
+  const [filtrosHospedagem, setFiltrosHospedagem] = useState({
+    tipo: "N",
+    precoMin: "",
+    precoMax: "",
+  });
+  const [paginacaoHospedagem, setPaginacaoHospedagem] = useState({
+    page: 1,
+    limit: 6,
+    total: 0,
+    totalPages: 0,
+  });
 
   const calcularMediaAvaliacoes = (avaliacoes) => {
     if (!avaliacoes || avaliacoes.length === 0) return 0;
@@ -183,6 +210,88 @@ const DetalhesModal = memo(function DetalhesModal({
     }
   };
 
+  const handleOpenHospedagemModal = (hospedagem) => {
+    setSelectedHospedagem(hospedagem);
+    setOpenHospedagemModal(true);
+  };
+
+  const handleCloseHospedagemModal = () => {
+    setOpenHospedagemModal(false);
+  };
+
+  // Buscar hospedagens da API apenas quando clicar no botão pesquisar
+  useEffect(() => {
+    if (tabValue === 4 && ponto?.id && open) {
+      // Busca inicial ao abrir a tab
+      fetchHospedagens();
+    }
+  }, [tabValue, ponto?.id, open, paginacaoHospedagem.page]);
+
+  const fetchHospedagens = async () => {
+    if (!ponto?.id) return;
+
+    try {
+      setLoadingHospedagens(true);
+      const params = new URLSearchParams({
+        pontoId: ponto.id,
+        page: paginacaoHospedagem.page.toString(),
+        limit: paginacaoHospedagem.limit.toString(),
+      });
+
+      if (filtrosHospedagem.tipo != "N")
+        params.append("tipo", filtrosHospedagem.tipo);
+      if (filtrosHospedagem.precoMin)
+        params.append("precoMin", filtrosHospedagem.precoMin);
+      if (filtrosHospedagem.precoMax)
+        params.append("precoMax", filtrosHospedagem.precoMax);
+
+      const response = await axios.get(`${HOSPEDAGENS_API_URL}?${params}`);
+
+      setHospedagens(response.data.data || []);
+      setPaginacaoHospedagem((prev) => ({
+        ...prev,
+        total: response.data.total || 0,
+        totalPages: response.data.totalPages || 1,
+      }));
+    } catch (error) {
+      console.error("Erro ao buscar hospedagens:", error);
+      setHospedagens([]);
+    } finally {
+      setLoadingHospedagens(false);
+    }
+  };
+
+  const handleFiltroHospedagemChange = (field, value) => {
+    setFiltrosHospedagem((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handlePesquisarHospedagens = () => {
+    setPaginacaoHospedagem((prev) => ({ ...prev, page: 1 }));
+    fetchHospedagens();
+  };
+
+  const handlePageHospedagemChange = (event, value) => {
+    setPaginacaoHospedagem((prev) => ({ ...prev, page: value }));
+  };
+
+  const limparFiltrosHospedagem = () => {
+    setFiltrosHospedagem({ tipo: "", precoMin: "", precoMax: "" });
+    setPaginacaoHospedagem((prev) => ({ ...prev, page: 1 }));
+  };
+
+  const hasActiveFiltrosHospedagem = Object.values(filtrosHospedagem).some(
+    (value) => value !== ""
+  );
+
+  const tiposHospedagemOptions = [
+    { value: "N", label: "Todos" },
+    { value: "hotel", label: "Hotel" },
+    { value: "pousada", label: "Pousada" },
+    { value: "hostel", label: "Hostel" },
+  ];
+
+  if (!ponto) return null;
+
   return (
     <Modal
       open={open}
@@ -206,14 +315,19 @@ const DetalhesModal = memo(function DetalhesModal({
             <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
               <LocationOn color="action" />
               <Typography variant="h6">
-                {ponto.cidade}, {ponto.estado} - {ponto.pais}
+                {ponto.cidade}, {ponto.estado} - {ponto.pais}{" "}
+                {ponto.descricao && (
+                  <Typography
+                    variant="body1"
+                    color="text.secondary"
+                    sx={{ mb: 2 }}
+                  >
+                    {ponto.descricao}
+                  </Typography>
+                )}
               </Typography>
             </Box>
-            {ponto.descricao && (
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-                {ponto.descricao}
-              </Typography>
-            )}
+
             <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
               <Rating
                 value={parseFloat(calcularMediaAvaliacoes(detalhes.avaliacoes))}
@@ -242,6 +356,7 @@ const DetalhesModal = memo(function DetalhesModal({
             <Tab label={`Fotos (${detalhes.fotos?.length || 0})`} />
             <Tab label={`Avaliações (${detalhes.avaliacoes?.length || 0})`} />
             <Tab label={`Comentários (${detalhes.comentarios?.length || 0})`} />
+            <Tab label={`Hospedagens (${detalhes.hospedagens?.length || 0})`} />
           </Tabs>
 
           {/* Tab 0: Como Chegar */}
@@ -261,38 +376,38 @@ const DetalhesModal = memo(function DetalhesModal({
                 <Grid container spacing={2}>
                   <Grid size={12}>
                     <Typography
-                      variant="body2"
+                      variant="body1"
                       color="text.secondary"
                       gutterBottom
                     >
-                      Endereço:
-                    </Typography>
-                    <Typography variant="body1" fontWeight="500">
-                      {ponto.endereco || "Endereço não informado"}
+                      Endereço{" "}
+                      <Typography variant="body1" fontWeight="500">
+                        {ponto.endereco || "Endereço não informado"}
+                      </Typography>
                     </Typography>
                   </Grid>
                   <Grid size={{ xs: 12, md: 6 }}>
                     <Typography
-                      variant="body2"
+                      variant="body1"
                       color="text.secondary"
                       gutterBottom
                     >
-                      Latitude:
-                    </Typography>
-                    <Typography variant="body1">
-                      {ponto.latitude || "N/A"}
+                      Latitude{" "}
+                      <Typography variant="body1">
+                        {ponto.latitude || "N/A"}
+                      </Typography>
                     </Typography>
                   </Grid>
                   <Grid size={{ xs: 12, md: 6 }}>
                     <Typography
-                      variant="body2"
+                      variant="body1"
                       color="text.secondary"
                       gutterBottom
                     >
-                      Longitude:
-                    </Typography>
-                    <Typography variant="body1">
-                      {ponto.longitude || "N/A"}
+                      Longitude{" "}
+                      <Typography variant="body1">
+                        {ponto.longitude || "N/A"}
+                      </Typography>
                     </Typography>
                   </Grid>
                   {ponto.latitude && ponto.longitude && (
@@ -300,6 +415,7 @@ const DetalhesModal = memo(function DetalhesModal({
                       <Button
                         disableElevation
                         variant="contained"
+                        size="large"
                         startIcon={<Map />}
                         onClick={handleOpenMaps}
                         sx={{ mt: 2 }}
@@ -404,7 +520,7 @@ const DetalhesModal = memo(function DetalhesModal({
                             )}
                           </Avatar>
                           <Box sx={{ flex: 1 }}>
-                            <Typography variant="body2" fontWeight="600">
+                            <Typography variant="body1">
                               {avaliacao.usuario?.login || "Usuário"}
                             </Typography>
                             <Box
@@ -685,8 +801,215 @@ const DetalhesModal = memo(function DetalhesModal({
               </Grid>
             </Grid>
           )}
+
+          {/* Tab 4: Hospedagens */}
+          {tabValue === 4 && (
+            <Box>
+              {/* Filtros */}
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2,
+                  mb: 3,
+                  border: "1px solid",
+                  borderColor: "grey.300",
+                  borderRadius: 2,
+                }}
+              >
+                <Grid container spacing={2} sx={{ pt: 5 }}>
+                  <Grid size={{ xs: 12, md: 3 }}>
+                    <CustomSelect
+                      fullWidth
+                      label="Tipo de Hospedagem"
+                      value={filtrosHospedagem.tipo}
+                      onChange={(e) =>
+                        handleFiltroHospedagemChange("tipo", e.target.value)
+                      }
+                      options={tiposHospedagemOptions}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 3 }}>
+                    <CustomInput
+                      fullWidth
+                      type="number"
+                      label="Preço Mínimo (R$)"
+                      value={filtrosHospedagem.precoMin}
+                      onChange={(e) =>
+                        handleFiltroHospedagemChange("precoMin", e.target.value)
+                      }
+                      inputProps={{ min: 0, step: "0.01" }}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 3 }}>
+                    <CustomInput
+                      fullWidth
+                      type="number"
+                      label="Preço Máximo (R$)"
+                      value={filtrosHospedagem.precoMax}
+                      onChange={(e) =>
+                        handleFiltroHospedagemChange("precoMax", e.target.value)
+                      }
+                      inputProps={{ min: 0, step: "0.01" }}
+                    />
+                  </Grid>
+                  <Grid size={12}>
+                    <Button
+                      disableElevation
+                      size="large"
+                      variant="contained"
+                      onClick={handlePesquisarHospedagens}
+                      disabled={loadingHospedagens}
+                    >
+                      {loadingHospedagens ? "Buscando..." : "Pesquisar"}
+                    </Button>
+                    <Button
+                      size="large"
+                      sx={{ ml: 2 }}
+                      onClick={limparFiltrosHospedagem}
+                      disabled={
+                        loadingHospedagens || !hasActiveFiltrosHospedagem
+                      }
+                    >
+                      Limpar Filtros
+                    </Button>
+                  </Grid>
+                </Grid>
+                <Box
+                  sx={{
+                    mt: 2,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Typography variant="body2" color="text.secondary">
+                    {paginacaoHospedagem.total} hospedagem(ns) encontrada(s)
+                  </Typography>
+                </Box>
+              </Paper>
+
+              {/* Lista de Hospedagens */}
+              {loadingHospedagens ? (
+                <LoadingBox />
+              ) : hospedagens.length === 0 ? (
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 4,
+                    textAlign: "center",
+                  }}
+                >
+                  <Typography color="text.secondary">
+                    Nenhuma hospedagem encontrada
+                  </Typography>
+                </Paper>
+              ) : (
+                <>
+                  <Rows
+                    avatarProps={{ bgcolor: "primary.main" }}
+                    items={hospedagens.map((hospedagem) => ({
+                      id: hospedagem.id,
+                      titulo: hospedagem.nome,
+                      subtitulo: {
+                        hotel: "Hotel",
+                        pousada: "Pousada",
+                        hostel: "Hostel",
+                      }[hospedagem.tipo],
+                      icon: <Hotel />,
+                      action: () => handleOpenHospedagemModal(hospedagem),
+                    }))}
+                    checkmode={false}
+                    focusInItem={false}
+                    oneTapMode={true}
+                  />
+
+                  {/* Paginação */}
+                  {paginacaoHospedagem.totalPages > 1 && (
+                    <Box
+                      sx={{ display: "flex", justifyContent: "center", mt: 3 }}
+                    >
+                      <Pagination
+                        count={paginacaoHospedagem.totalPages}
+                        page={paginacaoHospedagem.page}
+                        onChange={handlePageHospedagemChange}
+                        color="primary"
+                        size="large"
+                      />
+                    </Box>
+                  )}
+                </>
+              )}
+            </Box>
+          )}
         </Box>
       )}
+
+      {/* Modal de Detalhes da Hospedagem */}
+      <Modal
+        open={openHospedagemModal}
+        onClose={handleCloseHospedagemModal}
+        maxWidth="sm"
+        titulo={"Detalhes da Hospedagem"}
+        buttons={[
+          {
+            href: selectedHospedagem?.link_reserva,
+            title: "Fazer Reserva",
+            variant: "contained",
+          },
+        ]}
+      >
+        {selectedHospedagem && (
+          <Box>
+            <Typography variant="h5" sx={{ mb: 2 }}>
+              {selectedHospedagem?.nome}{" "}
+              <Typography variant="body1" color="text.secondary">
+                {
+                  {
+                    hotel: "Hotel",
+                    pousada: "Pousada",
+                    hostel: "Hostel",
+                  }[selectedHospedagem.tipo]
+                }
+              </Typography>
+            </Typography>
+
+            <Grid container spacing={3}>
+              {selectedHospedagem.endereco && (
+                <Grid size={12}>
+                  <Typography variant="body1">
+                    Endereço{" "}
+                    <Typography variant="body1" color="text.secondary">
+                      {selectedHospedagem.endereco}
+                    </Typography>
+                  </Typography>
+                </Grid>
+              )}
+
+              {selectedHospedagem.telefone && (
+                <Grid size={12}>
+                  <Typography variant="body1">
+                    Telefone{" "}
+                    <Typography variant="body1">
+                      {selectedHospedagem.telefone}
+                    </Typography>
+                  </Typography>
+                </Grid>
+              )}
+
+              {selectedHospedagem.preco_medio && (
+                <Grid size={12}>
+                  <Typography variant="body1">
+                    Preço Médio da Diária{" "}
+                    <Typography variant="body1" color="text.secondary">
+                      R$ {parseFloat(selectedHospedagem.preco_medio).toFixed(2)}
+                    </Typography>
+                  </Typography>
+                </Grid>
+              )}
+            </Grid>
+          </Box>
+        )}
+      </Modal>
 
       {/* Snackbar para mensagens */}
       <Snackbar
