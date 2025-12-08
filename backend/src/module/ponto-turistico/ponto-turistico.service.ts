@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
   Inject,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Not, Repository } from 'typeorm';
@@ -10,6 +11,12 @@ import { PontoTuristico } from '../../shared/database/entities/ponto-turistico.e
 import { CreatePontoTuristicoDto } from './dto/create-ponto-turistico.dto';
 import { UpdatePontoTuristicoDto } from './dto/update-ponto-turistico.dto';
 import { AuthService } from 'src/shared/auth';
+import { ExportFormat } from './dto/export-format.enum';
+import { ImportResultDto } from './dto/import-ponto-turistico.dto';
+import { Parser } from 'json2csv';
+import * as xml2js from 'xml2js';
+import { Readable } from 'stream';
+import * as csvParser from 'csv-parser';
 
 @Injectable()
 export class PontoTuristicoService {
@@ -185,5 +192,305 @@ export class PontoTuristicoService {
         },
       },
     });
+  }
+
+  // Export/Import Methods
+
+  async exportData(
+    format: ExportFormat,
+    filters?: {
+      nome?: string;
+      cidade?: string;
+      estado?: string;
+    },
+  ): Promise<string> {
+    // Get all data without pagination for export
+    const data = await this.pontoTuristicoRepository.find({
+      relations: ['criador'],
+      where: filters,
+      select: {
+        criador: {
+          id: true,
+          login: true,
+          email: true,
+        },
+      },
+    });
+
+    switch (format) {
+      case ExportFormat.JSON:
+        return this.exportToJson(data);
+      case ExportFormat.CSV:
+        return this.exportToCsv(data);
+      case ExportFormat.XML:
+        return this.exportToXml(data);
+      default:
+        throw new BadRequestException('Formato de exportação inválido');
+    }
+  }
+
+  private exportToJson(data: PontoTuristico[]): string {
+    // Simplify data structure for export
+    const exportData = data.map((ponto) => ({
+      nome: ponto.nome,
+      descricao: ponto.descricao,
+      cidade: ponto.cidade,
+      estado: ponto.estado,
+      pais: ponto.pais,
+      latitude: ponto.latitude,
+      longitude: ponto.longitude,
+      endereco: ponto.endereco,
+      criado_por: ponto.criador?.login || ponto.criado_por,
+      created_at: ponto.created_at,
+    }));
+
+    return JSON.stringify(exportData, null, 2);
+  }
+
+  private exportToCsv(data: PontoTuristico[]): string {
+    const fields = [
+      'nome',
+      'descricao',
+      'cidade',
+      'estado',
+      'pais',
+      'latitude',
+      'longitude',
+      'endereco',
+      'criado_por',
+      'created_at',
+    ];
+
+    const exportData = data.map((ponto) => ({
+      nome: ponto.nome,
+      descricao: ponto.descricao,
+      cidade: ponto.cidade,
+      estado: ponto.estado,
+      pais: ponto.pais,
+      latitude: ponto.latitude,
+      longitude: ponto.longitude,
+      endereco: ponto.endereco,
+      criado_por: ponto.criador?.login || ponto.criado_por,
+      created_at: ponto.created_at,
+    }));
+
+    const parser = new Parser({ fields });
+    return parser.parse(exportData);
+  }
+
+  private exportToXml(data: PontoTuristico[]): string {
+    const exportData = data.map((ponto) => ({
+      nome: ponto.nome,
+      descricao: ponto.descricao,
+      cidade: ponto.cidade,
+      estado: ponto.estado,
+      pais: ponto.pais,
+      latitude: ponto.latitude,
+      longitude: ponto.longitude,
+      endereco: ponto.endereco,
+      criado_por: ponto.criador?.login || ponto.criado_por,
+      created_at: ponto.created_at,
+    }));
+
+    const builder = new xml2js.Builder({
+      rootName: 'pontos_turisticos',
+      xmldec: { version: '1.0', encoding: 'UTF-8' },
+    });
+
+    return builder.buildObject({ ponto_turistico: exportData });
+  }
+
+  async importData(
+    format: ExportFormat,
+    fileContent: string,
+    userId: string,
+  ): Promise<ImportResultDto> {
+    switch (format) {
+      case ExportFormat.JSON:
+        return await this.importFromJson(fileContent, userId);
+      case ExportFormat.CSV:
+        return await this.importFromCsv(fileContent, userId);
+      case ExportFormat.XML:
+        return await this.importFromXml(fileContent, userId);
+      default:
+        throw new BadRequestException('Formato de importação inválido');
+    }
+  }
+
+  private async importFromJson(
+    content: string,
+    userId: string,
+  ): Promise<ImportResultDto> {
+    const result: ImportResultDto = {
+      imported: 0,
+      skipped: 0,
+      total: 0,
+      errors: [],
+    };
+
+    try {
+      const data = JSON.parse(content);
+      const items = Array.isArray(data) ? data : [data];
+      result.total = items.length;
+
+      for (const item of items) {
+        try {
+          // Check if already exists
+          const exists = await this.findByNameAndCity(item.nome, item.cidade);
+          if (exists) {
+            result.skipped++;
+            continue;
+          }
+
+          // Create new record
+          const novoPonto = this.pontoTuristicoRepository.create({
+            nome: item.nome,
+            descricao: item.descricao,
+            cidade: item.cidade,
+            estado: item.estado,
+            pais: item.pais,
+            latitude: parseFloat(item.latitude),
+            longitude: parseFloat(item.longitude),
+            endereco: item.endereco,
+            criado_por: userId,
+          });
+
+          await this.pontoTuristicoRepository.save(novoPonto);
+          result.imported++;
+        } catch (error) {
+          result.errors.push(`Erro ao importar ${item.nome}: ${error.message}`);
+        }
+      }
+    } catch (error) {
+      throw new BadRequestException(`Erro ao processar JSON: ${error.message}`);
+    }
+
+    return result;
+  }
+
+  private async importFromCsv(
+    content: string,
+    userId: string,
+  ): Promise<ImportResultDto> {
+    const result: ImportResultDto = {
+      imported: 0,
+      skipped: 0,
+      total: 0,
+      errors: [],
+    };
+
+    return new Promise((resolve, reject) => {
+      const items: any[] = [];
+      const stream = Readable.from([content]);
+
+      stream
+        .pipe(csvParser())
+        .on('data', (row) => {
+          items.push(row);
+        })
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises
+        .on('end', async () => {
+          result.total = items.length;
+
+          for (const item of items) {
+            try {
+              // Check if already exists
+              const exists = await this.findByNameAndCity(
+                item.nome,
+                item.cidade,
+              );
+              if (exists) {
+                result.skipped++;
+                continue;
+              }
+
+              // Create new record
+              const novoPonto = this.pontoTuristicoRepository.create({
+                nome: item.nome,
+                descricao: item.descricao,
+                cidade: item.cidade,
+                estado: item.estado,
+                pais: item.pais,
+                latitude: parseFloat(item.latitude),
+                longitude: parseFloat(item.longitude),
+                endereco: item.endereco,
+                criado_por: userId,
+              });
+
+              await this.pontoTuristicoRepository.save(novoPonto);
+              result.imported++;
+            } catch (error) {
+              result.errors.push(
+                `Erro ao importar ${item.nome}: ${error.message}`,
+              );
+            }
+          }
+
+          resolve(result);
+        })
+        .on('error', (error) => {
+          reject(
+            new BadRequestException(`Erro ao processar CSV: ${error.message}`),
+          );
+        });
+    });
+  }
+
+  private async importFromXml(
+    content: string,
+    userId: string,
+  ): Promise<ImportResultDto> {
+    const result: ImportResultDto = {
+      imported: 0,
+      skipped: 0,
+      total: 0,
+      errors: [],
+    };
+
+    try {
+      const parser = new xml2js.Parser();
+      const parsed = await parser.parseStringPromise(content);
+
+      const items = parsed.pontos_turisticos?.ponto_turistico || [];
+      result.total = items.length;
+
+      for (const item of items) {
+        try {
+          // Check if already exists
+          const exists = await this.findByNameAndCity(
+            item.nome[0],
+            item.cidade[0],
+          );
+          if (exists) {
+            result.skipped++;
+            continue;
+          }
+
+          // Create new record
+          const novoPonto = this.pontoTuristicoRepository.create({
+            nome: item.nome[0],
+            descricao: item.descricao[0],
+            cidade: item.cidade[0],
+            estado: item.estado[0],
+            pais: item.pais[0],
+            latitude: parseFloat(item.latitude[0]),
+            longitude: parseFloat(item.longitude[0]),
+            endereco: item.endereco[0],
+            criado_por: userId,
+          });
+
+          await this.pontoTuristicoRepository.save(novoPonto);
+          result.imported++;
+        } catch (error) {
+          result.errors.push(
+            `Erro ao importar ${item.nome?.[0]}: ${error.message}`,
+          );
+        }
+      }
+    } catch (error) {
+      throw new BadRequestException(`Erro ao processar XML: ${error.message}`);
+    }
+
+    return result;
   }
 }

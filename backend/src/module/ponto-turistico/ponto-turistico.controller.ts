@@ -24,7 +24,8 @@ import { PontoTuristicoService } from './ponto-turistico.service';
 import { CreatePontoTuristicoDto } from './dto/create-ponto-turistico.dto';
 import { UpdatePontoTuristicoDto } from './dto/update-ponto-turistico.dto';
 import { AuthGuard } from '../../shared/auth/auth.guard';
-
+import { Roles } from 'src/shared/auth';
+import { UserRole } from 'src/shared/database/entities/usuario.entity';
 @ApiTags('pontos-turisticos')
 @Controller('pontos-turisticos')
 export class PontoTuristicoController {
@@ -34,6 +35,7 @@ export class PontoTuristicoController {
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Criar novo ponto turístico' })
   @ApiResponse({
     status: 201,
@@ -119,6 +121,7 @@ export class PontoTuristicoController {
   @Patch(':id')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Atualizar ponto turístico' })
   @ApiParam({
     name: 'id',
@@ -152,6 +155,7 @@ export class PontoTuristicoController {
   @Delete(':id')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
+  @Roles(UserRole.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Deletar ponto turístico' })
   @ApiParam({
