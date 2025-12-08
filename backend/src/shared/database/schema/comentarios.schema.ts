@@ -7,6 +7,9 @@ export class Resposta {
   @Prop({ required: true })
   usuarioId: string;
 
+  @Prop({ required: true })
+  usuarioNome: string;
+
   @Prop({ required: true, maxlength: 500 })
   texto: string;
 
@@ -21,6 +24,9 @@ export class Comentarios {
 
   @Prop({ required: true })
   usuarioId: string;
+
+  @Prop({ required: true })
+  usuarioNome: string;
 
   @Prop({ required: true, maxlength: 500 })
   texto: string;

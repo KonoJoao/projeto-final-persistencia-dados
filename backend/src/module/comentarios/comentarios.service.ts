@@ -36,8 +36,9 @@ export class ComentariosService {
     createComentarioDto: CreateComentarioDto,
     req: any,
   ): Promise<ComentariosDocument> {
-    const user = await this.authService.extractUserFromAuthHeader(req);
-    const userId = user.id;
+    const userData = await this.authService.extractUserFromAuthHeader(req);
+    const userId = userData.id;
+    const user = await this.usuarioService.findById(String(userId));
 
     const ponto = await this.pontoTuristicoRepository.findOne({
       where: { id: createComentarioDto.pontoId },
@@ -50,6 +51,7 @@ export class ComentariosService {
     const comentario = new this.comentariosModel({
       ...createComentarioDto,
       usuarioId: userId,
+      usuarioNome: user?.login ?? '',
     });
 
     return await comentario.save();
@@ -129,14 +131,16 @@ export class ComentariosService {
     texto: string,
     req: any,
   ): Promise<ComentariosDocument> {
-    const user = await this.authService.extractUserFromAuthHeader(req);
-    const userId = user.id;
+    const userData = await this.authService.extractUserFromAuthHeader(req);
+    const userId = userData.id;
+    const user = await this.usuarioService.findById(String(userId));
 
     const comentario = await this.findOne(comentarioId);
 
     const novaResposta = {
       usuarioId: String(userId),
       texto,
+      usuarioNome: user?.login ?? '',
       data: new Date(),
     };
 
