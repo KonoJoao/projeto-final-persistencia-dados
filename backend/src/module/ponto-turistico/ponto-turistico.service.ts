@@ -17,20 +17,27 @@ import { Parser } from 'json2csv';
 import * as xml2js from 'xml2js';
 import { Readable } from 'stream';
 import * as csvParser from 'csv-parser';
+import { Cache } from 'cache-manager';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 @Injectable()
 export class PontoTuristicoService {
+  URL_CACHE = 'ponto-turistico';
+
   constructor(
     @InjectRepository(PontoTuristico)
     private pontoTuristicoRepository: Repository<PontoTuristico>,
     @Inject()
     private authService: AuthService,
+    @Inject(CACHE_MANAGER)
+    private cacheManager: Cache,
   ) {}
 
   async create(
     createPontoTuristicoDto: CreatePontoTuristicoDto,
     req: any,
   ): Promise<PontoTuristico> {
+    const cacheKey = `${this.URL_CACHE}:create`;
     const user = await this.authService.extractUserFromAuthHeader(req);
     const userId = user.id;
 
@@ -44,7 +51,12 @@ export class PontoTuristicoService {
       criado_por: String(userId),
     });
 
-    return await this.pontoTuristicoRepository.save(novoPonto);
+    const result = await this.pontoTuristicoRepository.save(novoPonto);
+
+    // Invalidate all cache entries
+    await this.invalidateCache(`${cacheKey}:${result.id}`);
+
+    return result;
   }
 
   async findByNameAndCity(nome: string, cidade: string, excecao?: string) {
@@ -70,7 +82,18 @@ export class PontoTuristicoService {
     page?: number;
     pageSize?: number;
   }): Promise<PontoTuristico[]> {
-    return await this.pontoTuristicoRepository.find({
+    // Create cache key based on filters
+    const cacheKey = `ponto-turistico:list:${JSON.stringify({ nome, cidade, estado, page, pageSize })}`;
+
+    // Try to get from cache
+    const cached = await this.cacheManager.get<PontoTuristico[]>(cacheKey);
+
+    if (cached) {
+      return cached;
+    }
+
+    // If not in cache, query database
+    const result = await this.pontoTuristicoRepository.find({
       relations: ['criador'],
       where: {
         nome,
@@ -87,9 +110,23 @@ export class PontoTuristicoService {
       take: pageSize,
       skip: (page - 1) * pageSize,
     });
+
+    // Store in cache
+    await this.cacheManager.set(cacheKey, result);
+
+    return result;
   }
 
   async findOne(id: string): Promise<PontoTuristico> {
+    const cacheKey = `${this.URL_CACHE}:${id}`;
+
+    // Try to get from cache
+    const cached = await this.cacheManager.get<PontoTuristico>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    // If not in cache, query database
     const ponto = await this.pontoTuristicoRepository.findOne({
       where: { id },
       relations: ['criador', 'avaliacoes', 'hospedagens'],
@@ -106,6 +143,8 @@ export class PontoTuristicoService {
       throw new NotFoundException('Ponto turístico não encontrado');
     }
 
+    await this.cacheManager.set(cacheKey, ponto);
+
     return ponto;
   }
 
@@ -114,6 +153,7 @@ export class PontoTuristicoService {
     updatePontoTuristicoDto: UpdatePontoTuristicoDto,
     req: any,
   ): Promise<PontoTuristico> {
+    const cacheKey = `${this.URL_CACHE}:${id}`;
     const user = await this.authService.extractUserFromAuthHeader(req);
     const userId = user.id;
 
@@ -134,7 +174,12 @@ export class PontoTuristicoService {
       );
 
     Object.assign(ponto, updatePontoTuristicoDto);
-    return await this.pontoTuristicoRepository.save(ponto);
+    const result = await this.pontoTuristicoRepository.save(ponto);
+
+    // Invalidate all cache entries
+    await this.invalidateCache(cacheKey);
+
+    return result;
   }
 
   async verificarSeExisteNomeDePontoNaCidade(
@@ -164,10 +209,22 @@ export class PontoTuristicoService {
     }
 
     await this.pontoTuristicoRepository.remove(ponto);
+
+    // Invalidate all cache entries
+    await this.invalidateCache(`city:${ponto.cidade}`);
   }
 
   async findByCity(cidade: string): Promise<PontoTuristico[]> {
-    return await this.pontoTuristicoRepository.find({
+    const cacheKey = `${this.URL_CACHE}:city:${cidade}`;
+
+    // Try to get from cache
+    const cached = await this.cacheManager.get<PontoTuristico[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    // If not in cache, query database
+    const result = await this.pontoTuristicoRepository.find({
       where: { cidade },
       relations: ['criador'],
       select: {
@@ -178,10 +235,24 @@ export class PontoTuristicoService {
         },
       },
     });
+
+    // Store in cache
+    await this.cacheManager.set(cacheKey, result);
+
+    return result;
   }
 
   async findByState(estado: string): Promise<PontoTuristico[]> {
-    return await this.pontoTuristicoRepository.find({
+    const cacheKey = `${this.URL_CACHE}:state:${estado}`;
+
+    // Try to get from cache
+    const cached = await this.cacheManager.get<PontoTuristico[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    // If not in cache, query database
+    const result = await this.pontoTuristicoRepository.find({
       where: { estado },
       relations: ['criador'],
       select: {
@@ -192,6 +263,11 @@ export class PontoTuristicoService {
         },
       },
     });
+
+    // Store in cache
+    await this.cacheManager.set(cacheKey, result);
+
+    return result;
   }
 
   // Export/Import Methods
@@ -492,5 +568,10 @@ export class PontoTuristicoService {
     }
 
     return result;
+  }
+
+  private async invalidateCache(key: string): Promise<void> {
+    // Invalidate all ponto-turistico cache entries
+    await this.cacheManager.del(`${this.URL_CACHE}:${key}`);
   }
 }

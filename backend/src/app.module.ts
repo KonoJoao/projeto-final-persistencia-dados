@@ -14,7 +14,7 @@ import { AuthModule } from './shared/auth/auth.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({}),
+    ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
     HealthModule,
     UserModule,

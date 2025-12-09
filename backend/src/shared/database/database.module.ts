@@ -8,8 +8,10 @@ import { Hospedagem } from './entities/hospedagem.entity';
 import { Avaliacao } from './entities/avaliacao.entity';
 import { Fotos, FotosSchema } from './schema/fotos.schema';
 import { Comentarios, ComentariosSchema } from './schema/comentarios.schema';
-import { CacheModule } from '@nestjs/cache-manager';
-import { redisStore } from 'cache-manager-redis-store';
+import { CacheInterceptor, CacheModule } from '@nestjs/cache-manager';
+import { CacheableMemory, Keyv } from 'cacheable';
+import KeyvRedis from '@keyv/redis';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -40,19 +42,30 @@ import { redisStore } from 'cache-manager-redis-store';
       { name: Comentarios.name, schema: ComentariosSchema },
     ]),
     CacheModule.registerAsync({
+      isGlobal: true,
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (config: ConfigService) => ({
-        store: await redisStore({
-          socket: {
-            host: config.get('REDIS_HOST') ?? 'localhost',
-            port: Number(config.get('REDIS_PORT') ?? 6379),
-          },
-        }),
-        ttl: 60 * 1000,
-      }),
+      useFactory: (configService: ConfigService) => {
+        const redisHost = configService.get('REDIS_HOST', 'localhost');
+        const redisPort = configService.get('REDIS_PORT', '6379');
+
+        return {
+          stores: [
+            new Keyv({
+              store: new CacheableMemory({ ttl: 60000, lruSize: 5000 }),
+            }),
+            new KeyvRedis(`redis://${redisHost}:${redisPort}`),
+          ],
+        };
+      },
     }),
   ],
   exports: [MongooseModule],
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: CacheInterceptor,
+    },
+  ],
 })
 export class DatabaseModule {}
