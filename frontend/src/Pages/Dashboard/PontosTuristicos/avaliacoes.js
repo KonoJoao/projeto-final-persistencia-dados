@@ -37,7 +37,7 @@ export default function AvaliacoesManager({ pontoId, pontoNome }) {
   const fetchAvaliacoes = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}?ponto_id=${pontoId}`);
+      const response = await axios.get(`${API_URL}?pontoId=${pontoId}`);
       setAvaliacoes(response.data);
     } catch (error) {
       console.error("Erro ao buscar avaliações:", error);

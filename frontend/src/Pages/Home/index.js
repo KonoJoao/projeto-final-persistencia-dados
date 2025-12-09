@@ -115,7 +115,7 @@ export default function Home() {
       const [fotosRes, avaliacoesRes, comentariosRes, hospedagensRes] =
         await Promise.all([
           axios.get(`${FOTOS_API_URL}/ponto/${pontoId}`),
-          axios.get(`${AVALIACOES_API_URL}?ponto_id=${pontoId}`),
+          axios.get(`${AVALIACOES_API_URL}?pontoId=${pontoId}`),
           axios.get(`${COMENTARIOS_API_URL}?pontoId=${pontoId}`),
           axios.get(`${HOSPEDAGENS_API_URL}/ponto/${pontoId}`),
         ]);
@@ -124,7 +124,7 @@ export default function Home() {
         fotos: fotosRes.data,
         avaliacoes: avaliacoesRes.data,
         comentarios: comentariosRes.data,
-        hospedagens: hospedagensRes.data.data || hospedagensRes.data, // Trata resposta paginada
+        hospedagens: hospedagensRes.data.data || hospedagensRes.data,
       });
     } catch (error) {
       console.error("Erro ao buscar detalhes:", error);
@@ -145,7 +145,7 @@ export default function Home() {
     // Não atualizar filtros diretamente durante o estado
     if (field === "estado") {
       const estadoSelecionado = estadosCidadesData.estados.find(
-        (e) => e.sigla === value
+        (e) => e.nome === value
       );
       setCidadesDisponiveis(estadoSelecionado?.cidades || []);
       setFilters((prev) => ({ ...prev, [field]: value, cidade: "" }));
@@ -175,6 +175,12 @@ export default function Home() {
     });
   };
 
+  const handleAvaliacaoAdicionada = () => {
+    if (selectedPonto) {
+      fetchPontoDetalhes(selectedPonto.id);
+    }
+  };
+
   const calcularMediaAvaliacoes = (avaliacoes) => {
     if (!avaliacoes || avaliacoes.length === 0) return 0;
     const soma = avaliacoes.reduce((acc, av) => acc + (av.nota || 0), 0);
@@ -196,7 +202,7 @@ export default function Home() {
   const estadosOptions = [
     { value: "", label: "Selecione um estado" },
     ...estadosCidadesData.estados.map((estado) => ({
-      value: estado.sigla,
+      value: estado.nome,
       label: estado.nome,
     })),
   ];
@@ -236,10 +242,7 @@ export default function Home() {
       size: 2,
       icon: <LocationOn color="action" sx={{ fontSize: 20 }} />,
       onClick: () => handleOpenModal("estado"),
-      formatter: (v) => {
-        const estado = estadosCidadesData.estados.find((e) => e.sigla === v);
-        return estado ? estado.nome : v;
-      },
+      formatter: (v) => v, // Agora retorna o nome direto
     },
     {
       id: "cidade",
@@ -518,6 +521,7 @@ export default function Home() {
             },
           },
         ]}
+        paperProps={{ style: { paddingTop: "10px" } }}
       >
         <CustomInput
           fullWidth
@@ -534,6 +538,7 @@ export default function Home() {
         onClose={() => handleCloseModal("estado")}
         titulo="Filtrar por Estado"
         maxWidth="sm"
+        paperProps={{ style: { paddingTop: "10px" } }}
         buttons={[
           {
             title: "Limpar",
@@ -568,6 +573,7 @@ export default function Home() {
         onClose={() => handleCloseModal("cidade")}
         titulo="Filtrar por Cidade"
         maxWidth="sm"
+        paperProps={{ style: { paddingTop: "10px" } }}
         buttons={[
           {
             title: "Limpar",
@@ -611,6 +617,7 @@ export default function Home() {
         ponto={selectedPonto}
         detalhes={pontoDetalhes}
         loading={loadingDetalhes}
+        onComentarioAdicionado={handleAvaliacaoAdicionada}
       />
     </Box>
   );
