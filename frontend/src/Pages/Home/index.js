@@ -14,6 +14,8 @@ import {
   CardContent,
   Rating,
   CardActionArea,
+  Pagination,
+  Button,
 } from "@mui/material";
 import { Search, LocationOn, Business } from "@mui/icons-material";
 import { Modal } from "../../Components/Modal";
@@ -21,6 +23,7 @@ import { CustomInput, CustomSelect, LoadingBox } from "../../Components/Custom";
 import estadosCidadesData from "../../Assets/Home/cidades-estados.json";
 import DetalhesModal from "./DetalhesModal";
 import axios from "axios";
+import PlaceHolderImage from "../../Assets/Home/placeholder.png";
 
 const API_URL = "http://localhost:3001/pontos-turisticos";
 const FOTOS_API_URL = "http://localhost:3001/fotos";
@@ -57,24 +60,63 @@ export default function Home() {
   });
   const [loadingDetalhes, setLoadingDetalhes] = useState(false);
 
+  const PAGE_SIZE = 10; // fixo em 10 itens por página
+  const [page, setPage] = useState(1); // 1-based
+  const [hasMore, setHasMore] = useState(true); // indica se há próxima página
+
   // Buscar pontos turísticos apenas ao carregar a página
   useEffect(() => {
     fetchPontosTuristicos();
   }, []); // Array vazio para executar apenas uma vez
 
-  const fetchPontosTuristicos = async () => {
+  // Buscar pontos turísticos quando página ou filtros mudarem
+  useEffect(() => {
+    fetchPontosTuristicos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, filters.nome, filters.estado, filters.cidade]);
+
+  const fetchPontosTuristicos = async (pageArg = page) => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
       if (filters.nome) params.append("nome", filters.nome);
       if (filters.estado) params.append("estado", filters.estado);
       if (filters.cidade) params.append("cidade", filters.cidade);
+      params.append("page", pageArg.toString());
+      params.append("pageSize", PAGE_SIZE.toString());
 
-      const response = await axios.get(`${API_URL}?${params}`);
-      const pontos = response.data;
+      const response = await axios.get(`${API_URL}?${params.toString()}`);
+      const resData = response.data;
+
+      // suporta resposta paginada { data: [], total } ou array simples
+      let pontos = [];
+      let total = 0;
+      if (resData) {
+        if (Array.isArray(resData)) {
+          pontos = resData;
+          total = resData.length;
+        } else if (resData.data) {
+          pontos = resData.data;
+          total = resData.total ?? resData.totalCount ?? resData.data.length;
+        } else {
+          pontos = resData;
+          total = (resData && resData.length) || 0;
+        }
+      }
+
+      // Se não houver itens para esta página e não for a primeira página,
+      // reverte para a página anterior e marca que não há mais páginas à frente.
+      if ((!pontos || pontos.length === 0) && pageArg > 1) {
+        setHasMore(false);
+        setPage((prev) => Math.max(1, prev - 1));
+        return;
+      }
+
       setPontosTuristicos(pontos);
+      // existe próxima página se retornou exatamente PAGE_SIZE itens
+      setHasMore(Array.isArray(pontos) && pontos.length === PAGE_SIZE);
 
-      // Buscar fotos para cada ponto
+      // Buscar fotos para cada ponto retornado (apenas os da página)
       await fetchFotosPontos(pontos);
     } catch (error) {
       console.error("Erro ao buscar pontos turísticos:", error);
@@ -155,7 +197,10 @@ export default function Home() {
   };
 
   const handleSearch = () => {
-    fetchPontosTuristicos();
+    // resetar para primeira página ao buscar
+    setPage(1);
+    setHasMore(true);
+    // fetch será disparado pelo useEffect
   };
 
   const handleCardClick = async (ponto) => {
@@ -190,7 +235,7 @@ export default function Home() {
   const getPrimeiraFoto = (pontoId) => {
     const fotos = fotosPontos[pontoId];
     if (!fotos || fotos.length === 0) {
-      return "https://via.placeholder.com/400x300?text=Sem+Foto";
+      return PlaceHolderImage;
     }
 
     const primeiraFoto = fotos[0];
@@ -272,7 +317,6 @@ export default function Home() {
           display: "flex",
           alignItems: "flex-start",
           justifyContent: "center",
-          pt: 8,
         }}
       />
 
@@ -280,7 +324,7 @@ export default function Home() {
       <Box
         sx={{
           position: "absolute",
-          top: "70vh",
+          top: "55vh",
           left: "15vw",
           right: "15vw",
           width: "70vw",
@@ -390,7 +434,7 @@ export default function Home() {
       <Box sx={{ height: 150 }} />
 
       {/* LISTAGEM DE PONTOS TURÍSTICOS */}
-      <Container maxWidth="xl" sx={{ py: 6 }}>
+      <Container maxWidth="xl">
         <Typography variant="h5" fontWeight="bold" sx={{ mb: 3 }}>
           Pontos Turísticos
         </Typography>
@@ -412,91 +456,126 @@ export default function Home() {
             </Typography>
           </Paper>
         ) : (
-          <Grid container spacing={3}>
-            {pontosTuristicos.map((ponto) => {
-              const fotoUrl = getPrimeiraFoto(ponto.id);
-              return (
-                <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={ponto.id}>
-                  <Card
-                    elevation={0}
-                    sx={{
-                      height: "100%",
-                      border: "1px solid",
-                      borderColor: "grey.300",
-                      borderRadius: "10px",
-                      cursor: "pointer",
-                      ":hover": {
-                        opacity: 0.9,
-                        boxShadow: 3,
-                      },
-                    }}
-                    onClick={() => handleCardClick(ponto)}
-                  >
-                    <CardMedia
-                      component="img"
-                      height="200"
-                      image={fotoUrl}
-                      alt={ponto.nome}
-                      sx={{ objectFit: "cover" }}
-                      loading="lazy"
-                      onError={(e) => {
-                        if (
-                          e.target.src !==
-                          "https://via.placeholder.com/400x300?text=Sem+Foto"
-                        ) {
-                          e.target.src =
-                            "https://via.placeholder.com/400x300?text=Sem+Foto";
-                        }
+          <>
+            <Grid container spacing={3}>
+              {pontosTuristicos.map((ponto) => {
+                const fotoUrl = getPrimeiraFoto(ponto.id);
+                return (
+                  <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={ponto.id}>
+                    <Card
+                      elevation={0}
+                      sx={{
+                        height: "100%",
+                        border: "1px solid",
+                        borderColor: "grey.300",
+                        borderRadius: "10px",
+                        cursor: "pointer",
+                        ":hover": {
+                          opacity: 0.9,
+                          boxShadow: 3,
+                        },
                       }}
-                    />
-                    <CardContent>
-                      <Typography
-                        variant="h6"
-                        fontWeight="600"
-                        gutterBottom
-                        noWrap
-                      >
-                        {ponto.nome}
-                      </Typography>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1,
-                          mb: 1,
+                      onClick={() => handleCardClick(ponto)}
+                    >
+                      <CardMedia
+                        component="img"
+                        height="200"
+                        image={fotoUrl}
+                        alt={ponto.nome}
+                        sx={{ objectFit: "cover" }}
+                        loading="lazy"
+                        onError={(e) => {
+                          if (
+                            e.target.src !==
+                            "https://via.placeholder.com/400x300?text=Sem+Foto"
+                          ) {
+                            e.target.src =
+                              "https://via.placeholder.com/400x300?text=Sem+Foto";
+                          }
                         }}
-                      >
-                        <LocationOn fontSize="small" color="action" />
+                      />
+                      <CardContent>
                         <Typography
-                          variant="body2"
-                          color="text.secondary"
+                          variant="h6"
+                          fontWeight="600"
+                          gutterBottom
                           noWrap
                         >
-                          {ponto.cidade}, {ponto.estado}
+                          {ponto.nome}
                         </Typography>
-                      </Box>
-                      {ponto.descricao && (
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
+                        <Box
                           sx={{
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
-                            minHeight: 40,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1,
+                            mb: 1,
                           }}
                         >
-                          {ponto.descricao}
-                        </Typography>
-                      )}
-                    </CardContent>
-                  </Card>
-                </Grid>
-              );
-            })}
-          </Grid>
+                          <LocationOn fontSize="small" color="action" />
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            noWrap
+                          >
+                            {ponto.cidade}, {ponto.estado}
+                          </Typography>
+                        </Box>
+                        {ponto.descricao && (
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              minHeight: 40,
+                            }}
+                          >
+                            {ponto.descricao}
+                          </Typography>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                );
+              })}
+            </Grid>
+
+            {/* Rodapé de paginação: Prev / Next */}
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                gap: 2,
+                mt: 4,
+                mb: 2,
+              }}
+            >
+              <Button
+                variant="outlined"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                disableElevation
+              >
+                Anterior
+              </Button>
+
+              <Box sx={{ display: "flex", alignItems: "center", px: 2 }}>
+                <Typography variant="body2">Página {page}</Typography>
+              </Box>
+
+              <Button
+                disableElevation
+                variant="contained"
+                onClick={() => setPage((p) => p + 1)}
+                disabled={!hasMore}
+              >
+                Próxima
+              </Button>
+            </Box>
+          </>
         )}
       </Container>
 

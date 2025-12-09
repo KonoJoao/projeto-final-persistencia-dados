@@ -34,10 +34,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        uri: configService.get(
-          'MONGO_URI',
-          'mongodb://admin:admin@localhost:27017/turismo?authSource=admin',
-        ),
+        uri: configService.get('MONGO_URI', 'mongodb://localhost:27017'),
       }),
     }),
     MongooseModule.forFeature([

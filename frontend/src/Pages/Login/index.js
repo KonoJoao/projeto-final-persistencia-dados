@@ -8,6 +8,7 @@ import {
   Snackbar,
   Tabs,
   Tab,
+  Container,
 } from "@mui/material";
 import Banner from "../../Assets/Login/banner.png";
 import { CustomInput } from "../../Components/Custom";
@@ -98,7 +99,7 @@ export default function Login({ page }) {
   };
 
   return (
-    <Grid container>
+    <Grid container sx={{ height: "calc(100vh - 80px)" }}>
       <Grid
         size={{ xs: 0, md: 7 }}
         sx={{

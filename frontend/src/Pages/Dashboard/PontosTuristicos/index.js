@@ -60,11 +60,15 @@ export default function PontosTuristicos() {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCity, setFilterCity] = useState("");
+  const [filterState, setFilterState] = useState(""); // novo filtro de estado
+  const [page, setPage] = useState(1); // 1-based page para o backend
+  const [pageSize, setPageSize] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
   const [photos, setPhotos] = useState([]);
   const [loadingPhotos, setLoadingPhotos] = useState(false);
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
-  const [importFormat, setImportFormat] = useState("csv");
+  const [importFormat, setImportFormat] = useState(null);
   const [exporting, setExporting] = useState(false);
   const [exportFilters, setExportFilters] = useState({
     format: "csv",
@@ -91,11 +95,39 @@ export default function PontosTuristicos() {
   });
 
   const [cidadesDisponiveis, setCidadesDisponiveis] = useState([]);
+  const importFormatOptions = [
+    { value: "json", label: "JSON" },
+    { value: "csv", label: "CSV" },
+    { value: "xml", label: "XML" },
+  ];
 
+  const formatOptions = [
+    { value: "json", label: "JSON" },
+    { value: "csv", label: "CSV" },
+    { value: "xml", label: "XML" },
+  ];
+
+  const estadosOptions = [
+    { value: "", label: "Selecione um estado" },
+    ...estadosCidadesData.estados.map((estado) => ({
+      value: estado.nome,
+      label: estado.nome,
+    })),
+  ];
+
+  const cidadesOptions = [
+    { value: "", label: "Selecione uma cidade" },
+    ...cidadesDisponiveis.map((cidade) => ({
+      value: cidade,
+      label: cidade,
+    })),
+  ];
   // Fetch attractions
   useEffect(() => {
+    console.log(page);
     fetchAttractions();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize]);
 
   useEffect(() => {
     if (formData.estado) {
@@ -106,11 +138,54 @@ export default function PontosTuristicos() {
     }
   });
 
-  const fetchAttractions = async () => {
+  // atualizar cidadesDisponiveis também quando o filtro de estado (da toolbar) mudar
+  useEffect(() => {
+    if (filterState) {
+      const estadoSelecionado = estadosCidadesData.estados.find(
+        (estado) => estado.nome === filterState
+      );
+      setCidadesDisponiveis(estadoSelecionado?.cidades || []);
+    } else {
+      setCidadesDisponiveis([]);
+      setFilterCity("");
+    }
+
+    // quando filtros mudam, resetar para a página 1 e buscar
+    if (page !== 1) {
+      setPage(1);
+    } else {
+      // se já está na página 1, busca imediatamente
+      fetchAttractions(1, pageSize);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterState, filterCity, searchTerm]);
+
+  const fetchAttractions = async (pageArg = page, pageSizeArg = pageSize) => {
     try {
       setLoading(true);
-      const response = await axios.get(API_URL);
-      setAttractions(response.data);
+      const params = new URLSearchParams();
+      if (searchTerm) params.append("nome", searchTerm);
+      if (filterCity) params.append("cidade", filterCity);
+      if (filterState) params.append("estado", filterState);
+      params.append("page", pageArg.toString());
+      params.append("pageSize", (pageSizeArg + 1).toString());
+
+      const response = await axios.get(`${API_URL}?${params.toString()}`);
+      const resData = response.data;
+
+      // Suporta estrutura paginada { data: [], total: number } ou lista simples
+      if (resData && Array.isArray(resData)) {
+        setAttractions(resData);
+        setTotalCount(resData.length);
+      } else if (resData && resData.data) {
+        setAttractions(resData.data);
+        setTotalCount(
+          resData.total ?? resData.totalCount ?? resData.data.length
+        );
+      } else {
+        setAttractions(resData || []);
+        setTotalCount((resData && resData.length) || 0);
+      }
     } catch (error) {
       const message =
         error.response?.data?.message ||
@@ -120,6 +195,13 @@ export default function PontosTuristicos() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Aciona pesquisa manual (mantido para botão Pesquisar)
+  const handleSearch = () => {
+    setPage(1);
+    // fetch será disparado pelo useEffect de [page, pageSize]
+    fetchAttractions(1, pageSize);
   };
 
   const showSnackbar = (message, severity = "success") => {
@@ -375,12 +457,13 @@ export default function PontosTuristicos() {
   const handleOpenImportModal = () => {
     setOpenImportModal(true);
     setImportFile(null);
-    setImportFormat("csv");
+    setImportFormat(null);
   };
 
   const handleCloseImportModal = () => {
     setOpenImportModal(false);
     setImportFile(null);
+    setImportFormat(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -389,9 +472,11 @@ export default function PontosTuristicos() {
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
     if (file) {
-      // Determinar formato baseado na extensão
-      const extension = file.name.split(".").pop().toLowerCase();
-      const validExtensions = {
+      // Determinar formato primeiro pela extensão, depois por MIME como fallback
+      const extension = (file.name.split(".").pop() || "").toLowerCase();
+      const mime = (file.type || "").toLowerCase();
+
+      const extMap = {
         json: "json",
         csv: "csv",
         xml: "xml",
@@ -399,15 +484,29 @@ export default function PontosTuristicos() {
         xlsx: "csv",
       };
 
-      if (!validExtensions[extension]) {
+      const mimeMap = {
+        "application/json": "json",
+        "text/json": "json",
+        "text/csv": "csv",
+        "application/csv": "csv",
+        "application/xml": "xml",
+        "text/xml": "xml",
+        "application/vnd.ms-excel": "csv",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+          "csv",
+      };
+
+      let detected = extMap[extension] || mimeMap[mime] || null;
+
+      if (!detected) {
         showSnackbar(
-          "Formato de arquivo inválido. Use arquivos .json, .csv, .xml, .xls ou .xlsx",
+          "Formato de arquivo inválido. Use .json, .csv, .xml, .xls ou .xlsx",
           "error"
         );
         return;
       }
 
-      setImportFormat(validExtensions[extension]);
+      setImportFormat(detected);
       setImportFile(file);
     }
   };
@@ -476,19 +575,22 @@ export default function PontosTuristicos() {
       setExporting(true);
       const token = localStorage.getItem("token");
 
-      // Construir query params
+      // Construir query params usando os filtros atualmente aplicados na listagem
       const params = new URLSearchParams();
-      params.append("format", exportFilters.format);
-      if (exportFilters.nome) params.append("nome", exportFilters.nome);
-      if (exportFilters.cidade) params.append("cidade", exportFilters.cidade);
-      if (exportFilters.estado) params.append("estado", exportFilters.estado);
+      params.append("format", exportFilters.format || "csv");
+      if (searchTerm) params.append("nome", searchTerm);
+      if (filterCity) params.append("cidade", filterCity);
+      if (filterState) params.append("estado", filterState);
 
-      const response = await axios.get(`${API_URL}-exports/export?${params}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        responseType: "blob",
-      });
+      const response = await axios.get(
+        `${API_URL}-exports/export?${params.toString()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          responseType: "blob",
+        }
+      );
 
       // Criar URL do blob
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -500,7 +602,6 @@ export default function PontosTuristicos() {
         json: "json",
         csv: "csv",
         xml: "xml",
-        csv: "csv",
       };
       const extension = extensions[exportFilters.format] || "csv";
 
@@ -554,7 +655,7 @@ export default function PontosTuristicos() {
     {
       field: "acoes",
       headerName: "Ações",
-      width: 350,
+      width: 200,
       sortable: false,
       filterable: false,
       renderCell: (params) => (
@@ -618,46 +719,7 @@ export default function PontosTuristicos() {
     },
   ];
 
-  // Filter attractions
-  const filteredAttractions = attractions.filter((attraction) => {
-    const matchesSearch = attraction.nome
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const matchesCity =
-      filterCity === "" ||
-      attraction.cidade.toLowerCase().includes(filterCity.toLowerCase());
-    return matchesSearch && matchesCity;
-  });
-
-  const importFormatOptions = [
-    { value: "json", label: "JSON" },
-    { value: "csv", label: "CSV" },
-    { value: "xml", label: "XML" },
-  ];
-
-  const formatOptions = [
-    { value: "json", label: "JSON" },
-    { value: "csv", label: "CSV" },
-    { value: "xml", label: "XML" },
-    { value: "csv", label: "Excel (csv)" },
-  ];
-
-  const estadosOptions = [
-    { value: "", label: "Selecione um estado" },
-    ...estadosCidadesData.estados.map((estado) => ({
-      value: estado.nome,
-      label: estado.nome,
-    })),
-  ];
-
-  const cidadesOptions = [
-    { value: "", label: "Selecione uma cidade" },
-    ...cidadesDisponiveis.map((cidade) => ({
-      value: cidade,
-      label: cidade,
-    })),
-  ];
-
+  // UI: trocar input de cidade por select dependente do estado
   return (
     <Box>
       {/* Filtros */}
@@ -669,50 +731,58 @@ export default function PontosTuristicos() {
           alignItems: "center",
         }}
       >
-        <Grid container spacing={2}>
-          <Grid
-            size={12}
-            sx={{ display: "flex", alignItems: "center", gap: 2, marginTop: 2 }}
-          >
-            {" "}
+        <Grid container spacing={2} alignItems="center">
+          {/* <Grid size={{ xs: 12, md: 4 }} sx={{ display: "flex", gap: 2 }}>
             <CustomInput
-              placeholder="Buscar por nome"
+              label="Buscar por nome"
+              placeholder="Digite..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               sx={{ flex: 1 }}
             />
-            <CustomInput
-              placeholder="Filtrar por cidade"
+          </Grid> */}
+          <Grid size={{ xs: 12, md: 6 }} sx={{ display: "flex", gap: 2 }}>
+            <CustomSelect
+              fullWidth
+              label="Filtrar por Estado"
+              value={filterState}
+              onChange={(e) => setFilterState(e.target.value)}
+              options={estadosOptions}
+            />
+          </Grid>{" "}
+          <Grid size={{ xs: 12, md: 6 }} sx={{ display: "flex", gap: 2 }}>
+            <CustomSelect
+              fullWidth
+              label="Filtrar por Cidade"
               value={filterCity}
               onChange={(e) => setFilterCity(e.target.value)}
-              sx={{ flex: 1 }}
+              options={cidadesOptions}
+              disabled={!filterState}
             />
           </Grid>
-          <Grid
-            size={12}
-            sx={{ display: "flex", alignItems: "center", gap: 2, marginTop: 2 }}
-          >
-            {" "}
+          <Grid item xs={12} md={2} sx={{ display: "flex", gap: 2 }}>
             <Button
               variant="contained"
-              disableElevation
+              color="warning"
               startIcon={<FileUpload />}
-              size="large"
               onClick={handleOpenImportModal}
+              sx={{ color: "#fff" }}
+              disableElevation
             >
               Importar
             </Button>
+
             <Button
               variant="contained"
-              startIcon={<FileDownload />}
-              size="large"
               color="success"
-              disableElevation
+              startIcon={<FileDownload />}
               onClick={handleOpenExportModal}
               sx={{ color: "#fff" }}
+              disableElevation
             >
               Exportar
             </Button>
+
             <Button
               variant="contained"
               startIcon={<Add />}
@@ -728,11 +798,19 @@ export default function PontosTuristicos() {
       </Box>
 
       {/* DataGrid */}
-      <Paper sx={{ height: 600, width: "100%" }}>
+      <Paper sx={{ height: 700, width: "100%" }}>
         <DataGrid
-          rows={filteredAttractions}
+          rows={attractions}
           columns={columns}
           loading={loading}
+          paginationMode="server"
+          page={page - 1}
+          pageSize={pageSize}
+          rowCount={totalCount}
+          onPaginationModelChange={({ page, pageSize }) => {
+            //setPage(page + 1);
+            setPageSize(pageSize * (page + 1));
+          }}
           pageSizeOptions={[5, 10, 25, 50]}
           initialState={{
             pagination: { paginationModel: { pageSize: 10 } },
@@ -1239,20 +1317,11 @@ export default function PontosTuristicos() {
       >
         <Box sx={{ py: 2 }}>
           <Typography variant="body1" gutterBottom sx={{ mb: 3 }}>
-            Selecione o formato e o arquivo para importar pontos turísticos.
+            Selecione um arquivo (.json, .csv, .xml, .xls, .xlsx). O formato
+            será detectado automaticamente.
           </Typography>
 
           <Grid container spacing={3}>
-            <Grid size={12}>
-              <CustomSelect
-                fullWidth
-                label="Formato de Importação"
-                value={importFormat}
-                onChange={(e) => setImportFormat(e.target.value)}
-                options={importFormatOptions}
-              />
-            </Grid>
-
             <Grid size={12}>
               <Paper
                 elevation={0}
@@ -1298,12 +1367,14 @@ export default function PontosTuristicos() {
                     <Typography variant="caption" color="text.secondary">
                       {(importFile.size / 1024).toFixed(2)} KB
                     </Typography>
-                    <Chip
-                      label={importFormat.toUpperCase()}
-                      size="small"
-                      color="primary"
-                      sx={{ mt: 1 }}
-                    />
+                    {importFormat && (
+                      <Chip
+                        label={importFormat.toUpperCase()}
+                        size="small"
+                        color="primary"
+                        sx={{ mt: 1 }}
+                      />
+                    )}
                   </>
                 ) : (
                   <>
@@ -1360,12 +1431,12 @@ export default function PontosTuristicos() {
       >
         <Box sx={{ py: 2 }}>
           <Typography variant="body1" gutterBottom sx={{ mb: 3 }}>
-            Selecione o formato e aplique filtros opcionais para exportar os
-            pontos turísticos.
+            Selecione o formato. Os filtros aplicados na lista serão usados para
+            exportação.
           </Typography>
 
           <Grid container spacing={3}>
-            <Grid size={12}>
+            <Grid item xs={12}>
               <CustomSelect
                 fullWidth
                 label="Formato de Exportação"
@@ -1377,54 +1448,40 @@ export default function PontosTuristicos() {
               />
             </Grid>
 
-            <Grid size={12}>
-              <Typography variant="subtitle2" sx={{ mb: 2 }}>
-                Filtros (Opcional)
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
+                Filtros atuais (usados na exportação)
               </Typography>
-            </Grid>
 
-            <Grid size={12}>
-              <CustomInput
-                fullWidth
-                label="Nome"
-                placeholder="Filtrar por nome..."
-                value={exportFilters.nome}
-                onChange={(e) =>
-                  handleExportFilterChange("nome", e.target.value)
-                }
-              />
-            </Grid>
-
-            <Grid size={12}>
-              <CustomInput
-                fullWidth
-                label="Cidade"
-                placeholder="Filtrar por cidade..."
-                value={exportFilters.cidade}
-                onChange={(e) =>
-                  handleExportFilterChange("cidade", e.target.value)
-                }
-              />
-            </Grid>
-
-            <Grid size={12}>
-              <CustomInput
-                fullWidth
-                label="Estado"
-                placeholder="Filtrar por estado..."
-                value={exportFilters.estado}
-                onChange={(e) =>
-                  handleExportFilterChange("estado", e.target.value)
-                }
-              />
+              <Paper
+                elevation={0}
+                sx={{ p: 2, border: "1px solid", borderColor: "grey.300" }}
+              >
+                <Typography variant="body2">
+                  Nome: {searchTerm || "—"}
+                </Typography>
+                <Typography variant="body2">
+                  Estado: {filterState || "—"}
+                </Typography>
+                <Typography variant="body2">
+                  Cidade: {filterCity || "—"}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: "block", mt: 1 }}
+                >
+                  Para alterar os filtros, use os controles da lista e clique em
+                  Pesquisar.
+                </Typography>
+              </Paper>
             </Grid>
           </Grid>
 
           <Alert severity="info" sx={{ mt: 3 }}>
             <Typography variant="body2">
-              <strong>Dica:</strong> Deixe os filtros vazios para exportar todos
-              os pontos turísticos. Use os filtros para exportar apenas
-              registros específicos.
+              <strong>Observação:</strong> O arquivo conterá os registros
+              conforme os filtros atualmente aplicados na listagem.
             </Typography>
           </Alert>
         </Box>

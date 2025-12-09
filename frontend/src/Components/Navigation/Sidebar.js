@@ -47,6 +47,9 @@ export default function Sidebar({ routes, children, base = "" }) {
             width: drawerWidth,
             background: "rgba(0,0,0,0.05)",
             borderRight: "none",
+            height: "calc(100vh - 60px)",
+            top: "60px",
+            borderRight: "1px solid rgba(0,0,0,0.1)",
           },
         }}
       >
