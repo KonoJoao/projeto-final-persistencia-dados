@@ -8,10 +8,9 @@ import { Hospedagem } from './entities/hospedagem.entity';
 import { Avaliacao } from './entities/avaliacao.entity';
 import { Fotos, FotosSchema } from './schema/fotos.schema';
 import { Comentarios, ComentariosSchema } from './schema/comentarios.schema';
-import { CacheInterceptor, CacheModule } from '@nestjs/cache-manager';
+import { CacheModule } from '@nestjs/cache-manager';
 import { CacheableMemory, Keyv } from 'cacheable';
 import KeyvRedis from '@keyv/redis';
-import { APP_INTERCEPTOR } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -45,7 +44,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
       { name: Comentarios.name, schema: ComentariosSchema },
     ]),
     CacheModule.registerAsync({
-      isGlobal: true,
+      isGlobal: false,
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
@@ -55,7 +54,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
         return {
           stores: [
             new Keyv({
-              store: new CacheableMemory({ ttl: 60000, lruSize: 5000 }),
+              store: new CacheableMemory({}),
             }),
             new KeyvRedis(`redis://${redisHost}:${redisPort}`),
           ],
@@ -65,10 +64,10 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
   ],
   exports: [MongooseModule],
   providers: [
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: CacheInterceptor,
-    },
+    // {
+    //   provide: APP_INTERCEPTOR,
+    //   useClass: CacheInterceptor,
+    // },
   ],
 })
 export class DatabaseModule {}
