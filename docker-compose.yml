@@ -24,11 +24,11 @@ services:
   # MongoDB Database
   mongo:
     image: mongo:7
-    container_name: projeto-mongo
+    container_name: turismo
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: admin
-      MONGO_INITDB_DATABASE: projeto_mongo
+      MONGO_INITDB_DATABASE: turismo
     ports:
       - "27017:27017"
     volumes:
@@ -75,7 +75,7 @@ services:
       DB_PASSWORD: postgres
       DB_DATABASE: projeto_db
       # MongoDB
-      MONGO_URI: mongodb://admin:admin@mongo:27017/projeto_mongo?authSource=admin
+      MONGO_URI: mongodb://admin:admin@mongo:27017/turismo?authSource=admin
       # Redis
       REDIS_HOST: redis
       REDIS_PORT: 6379
