@@ -97,6 +97,15 @@ export default function PontosTuristicos() {
     fetchAttractions();
   }, []);
 
+  useEffect(() => {
+    if (formData.estado) {
+      const estadoSelecionado = estadosCidadesData.estados.find(
+        (estado) => estado.nome === formData.estado
+      );
+      setCidadesDisponiveis(estadoSelecionado?.cidades || []);
+    }
+  });
+
   const fetchAttractions = async () => {
     try {
       setLoading(true);
