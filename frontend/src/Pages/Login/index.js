@@ -11,7 +11,7 @@ import {
   Container,
 } from "@mui/material";
 import Banner from "../../Assets/Login/banner.png";
-import { CustomInput } from "../../Components/Custom";
+import { CustomInput, CustomSelect } from "../../Components/Custom";
 import { useState } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
@@ -28,7 +28,12 @@ export default function Login({ page }) {
     login: "",
     email: "",
     senha: "",
+    role: "USER", // novo campo: USER | ADMIN
   });
+  const roleOptions = [
+    { value: "USER", label: "USER" },
+    { value: "ADMIN", label: "ADMIN" },
+  ];
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -60,6 +65,8 @@ export default function Login({ page }) {
       if (response.data.access_token) {
         localStorage.setItem("accessType", response.data.role);
         localStorage.setItem("token", response.data.access_token);
+        // notifica App na mesma aba que auth mudou
+        window.dispatchEvent(new Event("authChanged"));
         showSnackbar("Login realizado com sucesso!");
         setTimeout(() => {
           navigate("/dashboard/pontos-turisticos");
@@ -82,8 +89,10 @@ export default function Login({ page }) {
       const response = await axios.post(`${API_URL}/register`, registerForm);
 
       if (response.data.access_token) {
-        localStorage.setItem("accessType", response.data.role);
+        localStorage.setItem("accessType", registerForm.role);
         localStorage.setItem("token", response.data.access_token);
+        // notifica App na mesma aba que auth mudou
+        window.dispatchEvent(new Event("authChanged"));
         showSnackbar("Cadastro realizado com sucesso!");
         setTimeout(() => {
           navigate("/");
@@ -108,7 +117,7 @@ export default function Login({ page }) {
           alignItems: "center",
         }}
       >
-        <img src={Banner} style={{ borderRadius: "10px" }} />
+        <img src={Banner} style={{ borderRadius: "10px", width: "90%" }} />
       </Grid>
       <Grid
         size={{ xs: 12, md: 5 }}
@@ -181,6 +190,17 @@ export default function Login({ page }) {
                   handleRegisterInputChange("email", e.target.value)
                 }
               />
+
+              <CustomSelect
+                fullWidth
+                label="Tipo de Acesso"
+                value={registerForm.role}
+                onChange={(e) =>
+                  handleRegisterInputChange("role", e.target.value)
+                }
+                options={roleOptions}
+              />
+
               <CustomInput
                 label="Senha"
                 type="password"

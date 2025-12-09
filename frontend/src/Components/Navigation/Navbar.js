@@ -9,7 +9,7 @@ import {
   Box,
 } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
-import Logo from "./logo.png";
+import Logo from "../../Assets/All/logo.png";
 
 export default function Navbar({ page }) {
   const navigate = useNavigate();

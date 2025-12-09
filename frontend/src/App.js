@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Box, createTheme, ThemeProvider } from "@mui/material";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "./Components/Navigation/Navbar";
 import Home from "./Pages/Home";
 import Login from "./Pages/Login";
@@ -36,29 +36,57 @@ const pages = {
 };
 
 export default function App() {
-  const [userAccessType, setUserAccessType] = useState(
-    localStorage.getItem("accessType") || "USER"
-  );
+  // state que controla quais páginas são usadas (atualiza ao logar/deslogar)
+  const initialAccess = (localStorage.getItem("accessType") || "USER")
+    .toString()
+    .toUpperCase();
+  const [userAccessType, setUserAccessType] = useState(initialAccess);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    const token = localStorage.getItem("token");
+    const access = (localStorage.getItem("accessType") || "").toString();
+    return !!token && !!access;
+  });
+
+  // Atualiza state quando localStorage mudar (ou quando dispatcharmos 'authChanged')
+  useEffect(() => {
+    const handleAuthChange = () => {
+      const token = localStorage.getItem("token");
+      const rawAccess = (localStorage.getItem("accessType") || "USER")
+        .toString()
+        .toUpperCase();
+      setIsAuthenticated(!!token && !!rawAccess);
+      setUserAccessType(rawAccess);
+    };
+
+    window.addEventListener("storage", handleAuthChange);
+    window.addEventListener("authChanged", handleAuthChange);
+    return () => {
+      window.removeEventListener("storage", handleAuthChange);
+      window.removeEventListener("authChanged", handleAuthChange);
+    };
+  }, []);
 
   return (
     <ThemeProvider theme={theme}>
       <BrowserRouter>
         <Routes>
-          {Object.entries(pages[userAccessType]).map(([path, element]) => {
-            const page = path.split("/")[1] || "home";
-            return (
-              <Route
-                key={path}
-                path={path}
-                element={
-                  <>
-                    <Navbar page={page} />
-                    {element}
-                  </>
-                }
-              />
-            );
-          })}
+          {Object.entries(pages[userAccessType] || pages["USER"]).map(
+            ([path, element]) => {
+              const page = path.split("/")[1] || "home";
+              return (
+                <Route
+                  key={path}
+                  path={path}
+                  element={
+                    <>
+                      <Navbar page={page} />
+                      {element}
+                    </>
+                  }
+                />
+              );
+            }
+          )}
         </Routes>
       </BrowserRouter>
     </ThemeProvider>
