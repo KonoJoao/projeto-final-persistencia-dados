@@ -20,21 +20,24 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
-        host: configService.getOrThrow('DB_HOST'),
-        port: configService.getOrThrow('DB_PORT'),
-        username: configService.getOrThrow('DB_USERNAME'),
-        password: configService.getOrThrow('DB_PASSWORD'),
-        database: configService.getOrThrow('DB_DATABASE'),
+        host: configService.get('DB_HOST', 'localhost'),
+        port: configService.get('DB_PORT', 5432),
+        username: configService.get('DB_USERNAME', 'postgres'),
+        password: configService.get('DB_PASSWORD', 'postgres'),
+        database: configService.get('DB_DATABASE', 'projeto_db'),
         entities: [Usuario, PontoTuristico, Hospedagem, Avaliacao],
-        synchronize: configService.getOrThrow('DB_SYNCHRONIZE'),
-        logging: configService.getOrThrow('DB_LOGGING'),
+        synchronize: configService.get('DB_SYNCHRONIZE', true),
+        logging: configService.get('DB_LOGGING', false),
       }),
     }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        uri: configService.getOrThrow('MONGO_URL'),
+        uri: configService.get(
+          'MONGO_URI',
+          'mongodb://admin:admin@localhost:27017/turismo?authSource=admin',
+        ),
       }),
     }),
     MongooseModule.forFeature([
