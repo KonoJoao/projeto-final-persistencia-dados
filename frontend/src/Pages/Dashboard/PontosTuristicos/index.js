@@ -22,12 +22,14 @@ import {
   Close,
   Comment,
   Star,
+  Hotel,
 } from "@mui/icons-material";
 import { CustomInput, LoadingBox } from "../../../Components/Custom";
 import { Modal } from "../../../Components/Modal";
 import ImageUploader from "../../../Components/ImageUploader";
 import ComentariosManager from "./comentarios";
 import AvaliacoesManager from "./avaliacoes";
+import HospedagensManager from "./hospedagens";
 import axios from "axios";
 
 const API_URL = "http://localhost:3001/pontos-turisticos";
@@ -43,6 +45,7 @@ export default function PontosTuristicos() {
   const [openDeletePhotoModal, setOpenDeletePhotoModal] = useState(false);
   const [openComentariosModal, setOpenComentariosModal] = useState(false);
   const [openAvaliacoesModal, setOpenAvaliacoesModal] = useState(false);
+  const [openHospedagensModal, setOpenHospedagensModal] = useState(false);
   const [selectedAttraction, setSelectedAttraction] = useState(null);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -227,6 +230,15 @@ export default function PontosTuristicos() {
     setOpenAvaliacoesModal(false);
   };
 
+  const handleOpenHospedagens = (attraction) => {
+    setSelectedAttraction(attraction);
+    setOpenHospedagensModal(true);
+  };
+
+  const handleCloseHospedagens = () => {
+    setOpenHospedagensModal(false);
+  };
+
   const resetForm = () => {
     setFormData({
       nome: "",
@@ -342,11 +354,20 @@ export default function PontosTuristicos() {
     {
       field: "acoes",
       headerName: "Ações",
-      width: 250,
+      width: 350,
       sortable: false,
       filterable: false,
       renderCell: (params) => (
-        <Box>
+        <>
+          <Tooltip title="Hospedagens" arrow>
+            <IconButton
+              onClick={() => handleOpenHospedagens(params.row)}
+              size="small"
+              color="success"
+            >
+              <Hotel fontSize="small" />
+            </IconButton>
+          </Tooltip>
           <Tooltip title="Ver comentários" arrow>
             <IconButton
               onClick={() => handleOpenComentariosModal(params.row)}
@@ -392,7 +413,7 @@ export default function PontosTuristicos() {
               <Close fontSize="small" />
             </IconButton>
           </Tooltip>
-        </Box>
+        </>
       ),
     },
   ];
@@ -900,6 +921,28 @@ export default function PontosTuristicos() {
       >
         {selectedAttraction && (
           <AvaliacoesManager
+            pontoId={selectedAttraction.id}
+            pontoNome={selectedAttraction.nome}
+          />
+        )}
+      </Modal>
+
+      {/* Modal de Hospedagens */}
+      <Modal
+        open={openHospedagensModal}
+        onClose={handleCloseHospedagens}
+        maxWidth="lg"
+        titulo={`Hospedagens - ${selectedAttraction?.nome || ""}`}
+        buttons={[
+          {
+            title: "Fechar",
+            variant: "contained",
+            action: handleCloseHospedagens,
+          },
+        ]}
+      >
+        {selectedAttraction && (
+          <HospedagensManager
             pontoId={selectedAttraction.id}
             pontoNome={selectedAttraction.nome}
           />

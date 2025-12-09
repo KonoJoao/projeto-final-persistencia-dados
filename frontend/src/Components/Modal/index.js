@@ -110,6 +110,8 @@ export const Modal = ({
                     icon={button.icon}
                     variant={button.variant ? button.variant : "outlined"}
                     sx={button.sx}
+                    href={button.href}
+                    target={button.href ? "_blank" : undefined}
                   >
                     {button.titulo || button.title}
                   </Button>
