@@ -45,7 +45,7 @@ export default function Sidebar({ routes, children, base = "" }) {
           width: drawerWidth,
           "& .MuiDrawer-paper": {
             width: drawerWidth,
-            background: "#fafafaff",
+            background: "rgba(0,0,0,0.05)",
             borderRight: "none",
           },
         }}

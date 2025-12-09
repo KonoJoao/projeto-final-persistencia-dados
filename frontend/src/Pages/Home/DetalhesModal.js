@@ -48,6 +48,7 @@ import { useNavigate } from "react-router-dom";
 const FOTOS_API_URL = "http://localhost:3001/fotos";
 const COMENTARIOS_API_URL = "http://localhost:3001/comentarios";
 const HOSPEDAGENS_API_URL = "http://localhost:3001/hospedagens";
+const AVALIACOES_API_URL = "http://localhost:3001/avaliacoes";
 
 const DetalhesModal = memo(function DetalhesModal({
   open,
@@ -86,6 +87,13 @@ const DetalhesModal = memo(function DetalhesModal({
     total: 0,
     totalPages: 0,
   });
+
+  // Estados para avaliação
+  const [novaAvaliacao, setNovaAvaliacao] = useState({
+    nota: 0,
+    comentario: "",
+  });
+  const [submittingAvaliacao, setSubmittingAvaliacao] = useState(false);
 
   const calcularMediaAvaliacoes = (avaliacoes) => {
     if (!avaliacoes || avaliacoes.length === 0) return 0;
@@ -200,6 +208,52 @@ const DetalhesModal = memo(function DetalhesModal({
       showSnackbar(message, "error");
     } finally {
       setSubmittingResp(false);
+    }
+  };
+
+  const handleSubmitAvaliacao = async () => {
+    if (novaAvaliacao.nota === 0) {
+      showSnackbar("Selecione uma nota de 1 a 5", "warning");
+      return;
+    }
+
+    try {
+      setSubmittingAvaliacao(true);
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        showSnackbar("Você precisa estar autenticado para avaliar", "error");
+        return;
+      }
+
+      await axios.post(
+        AVALIACOES_API_URL,
+        {
+          ponto_id: ponto.id,
+          nota: novaAvaliacao.nota,
+          comentario: novaAvaliacao.comentario.trim() || null,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      showSnackbar("Avaliação enviada com sucesso!", "success");
+      setNovaAvaliacao({ nota: 0, comentario: "" });
+
+      // Recarregar detalhes
+      if (onComentarioAdicionado) {
+        onComentarioAdicionado();
+      }
+    } catch (error) {
+      console.error("Erro ao enviar avaliação:", error);
+      const message =
+        error.response?.data?.message || "Erro ao enviar avaliação";
+      showSnackbar(message, "error");
+    } finally {
+      setSubmittingAvaliacao(false);
     }
   };
 
@@ -356,7 +410,7 @@ const DetalhesModal = memo(function DetalhesModal({
             <Tab label={`Fotos (${detalhes.fotos?.length || 0})`} />
             <Tab label={`Avaliações (${detalhes.avaliacoes?.length || 0})`} />
             <Tab label={`Comentários (${detalhes.comentarios?.length || 0})`} />
-            <Tab label={`Hospedagens (${detalhes.hospedagens?.length || 0})`} />
+            <Tab label={`Hospedagens`} />
           </Tabs>
 
           {/* Tab 0: Como Chegar */}
@@ -478,96 +532,164 @@ const DetalhesModal = memo(function DetalhesModal({
 
           {/* Tab 2: Avaliações */}
           {tabValue === 2 && (
-            <Box>
-              {detalhes.avaliacoes?.length === 0 ? (
+            <Grid container spacing={2}>
+              <Grid size={6}>
+                {/* Formulário de Nova Avaliação */}
                 <Paper
                   elevation={0}
                   sx={{
-                    p: 4,
-                    textAlign: "center",
+                    p: 3,
+                    mb: 3,
                     border: "1px solid",
                     borderColor: "grey.300",
+                    borderRadius: "10px",
                   }}
                 >
-                  <Typography color="text.secondary">
-                    Nenhuma avaliação ainda
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    Avaliar este ponto turístico
                   </Typography>
-                </Paper>
-              ) : (
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                  {detalhes.avaliacoes?.map((avaliacao) => (
-                    <Card
-                      key={avaliacao.id}
-                      elevation={0}
-                      sx={{
-                        border: "1px solid",
-                        borderRadius: "10px",
-                        borderColor: "grey.300",
+
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      Sua nota *
+                    </Typography>
+                    <Rating
+                      value={novaAvaliacao.nota}
+                      onChange={(event, newValue) => {
+                        setNovaAvaliacao((prev) => ({
+                          ...prev,
+                          nota: newValue || 0,
+                        }));
                       }}
-                    >
-                      <Box sx={{ p: 2 }}>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 2,
-                            mb: 1,
-                          }}
-                        >
-                          <Avatar sx={{ bgcolor: "primary.main" }}>
-                            {avaliacao.usuario?.login?.[0]?.toUpperCase() || (
-                              <Person />
-                            )}
-                          </Avatar>
-                          <Box sx={{ flex: 1 }}>
-                            <Typography variant="body1">
-                              {avaliacao.usuario?.login || "Usuário"}
-                            </Typography>
-                            <Box
-                              sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 1,
-                              }}
-                            >
-                              <Rating
-                                value={avaliacao.nota || 0}
-                                size="small"
-                                readOnly
-                              />
-                            </Box>
-                          </Box>
+                      size="large"
+                      precision={1}
+                    />
+                  </Box>
+
+                  <CustomInput
+                    fullWidth
+                    multiline
+                    rows={4}
+                    label="Comentário (opcional)"
+                    placeholder="Conte sua experiência..."
+                    value={novaAvaliacao.comentario}
+                    onChange={(e) =>
+                      setNovaAvaliacao((prev) => ({
+                        ...prev,
+                        comentario: e.target.value,
+                      }))
+                    }
+                    sx={{ mb: 2 }}
+                  />
+
+                  <Button
+                    size="large"
+                    disableElevation
+                    variant="contained"
+                    endIcon={<Send />}
+                    onClick={handleSubmitAvaliacao}
+                    disabled={submittingAvaliacao || novaAvaliacao.nota === 0}
+                    fullWidth
+                  >
+                    {submittingAvaliacao ? "Enviando..." : "Enviar Avaliação"}
+                  </Button>
+                </Paper>
+              </Grid>
+
+              <Grid size={6}>
+                {/* Lista de Avaliações */}
+                {detalhes.avaliacoes?.length === 0 ? (
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 4,
+                      textAlign: "center",
+                      border: "1px solid",
+                      borderColor: "grey.300",
+                    }}
+                  >
+                    <Typography color="text.secondary">
+                      Nenhuma avaliação ainda. Seja o primeiro a avaliar!
+                    </Typography>
+                  </Paper>
+                ) : (
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+                  >
+                    {detalhes.avaliacoes?.map((avaliacao) => (
+                      <Card
+                        key={avaliacao.id}
+                        elevation={0}
+                        sx={{
+                          border: "1px solid",
+                          borderRadius: "10px",
+                          borderColor: "grey.300",
+                        }}
+                      >
+                        <Box sx={{ p: 2 }}>
                           <Box
                             sx={{
                               display: "flex",
                               alignItems: "center",
-                              gap: 0.5,
+                              gap: 2,
+                              mb: 1,
                             }}
                           >
-                            <CalendarToday
-                              sx={{ fontSize: 14, color: "text.secondary" }}
-                            />
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
+                            <Avatar sx={{ bgcolor: "primary.main" }}>
+                              {avaliacao.usuario?.login?.[0]?.toUpperCase() || (
+                                <Person />
+                              )}
+                            </Avatar>
+                            <Box sx={{ flex: 1 }}>
+                              <Typography variant="body2" fontWeight="600">
+                                {avaliacao.usuario?.login || "Usuário"}
+                              </Typography>
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 1,
+                                }}
+                              >
+                                <Rating
+                                  value={avaliacao.nota || 0}
+                                  size="small"
+                                  readOnly
+                                />
+                              </Box>
+                            </Box>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 0.5,
+                              }}
                             >
-                              {new Date(
-                                avaliacao.created_at
-                              ).toLocaleDateString("pt-BR")}
-                            </Typography>
+                              <CalendarToday
+                                sx={{ fontSize: 14, color: "text.secondary" }}
+                              />
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                {new Date(
+                                  avaliacao.created_at
+                                ).toLocaleDateString("pt-BR")}
+                              </Typography>
+                            </Box>
                           </Box>
+                          {avaliacao.comentario && (
+                            <Typography variant="body2" sx={{ mt: 1 }}>
+                              {avaliacao.comentario}
+                            </Typography>
+                          )}
                         </Box>
-                        {avaliacao.comentario && (
-                          <Typography variant="body2" sx={{ mt: 1 }}>
-                            {avaliacao.comentario}
-                          </Typography>
-                        )}
-                      </Box>
-                    </Card>
-                  ))}
-                </Box>
-              )}
-            </Box>
+                      </Card>
+                    ))}
+                  </Box>
+                )}
+              </Grid>
+            </Grid>
           )}
 
           {/* Tab 3: Comentários */}

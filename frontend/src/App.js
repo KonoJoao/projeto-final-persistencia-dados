@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Box, createTheme, ThemeProvider } from "@mui/material";
+import { useState } from "react";
 import Navbar from "./Components/Navigation/Navbar";
 import Home from "./Pages/Home";
 import Login from "./Pages/Login";
@@ -17,33 +18,47 @@ const theme = createTheme({
   },
 });
 
-const RouteWithNavbar = (path, element) => {
-  const page = path.split("/")[1] || "home";
-
-  return (
-    <Route
-      path={path}
-      element={
-        <>
-          <Navbar page={page} />
-          {element}
-        </>
-      }
-    />
-  );
+const pages = {
+  ADMIN: {
+    "/": <Home />,
+    "/login": <Login page="login" />,
+    "/logon": <Login page="logon" />,
+    "/dashboard/:path?/:id?": <DashboardPage />,
+    "/comentarios/:id": <ComentariosPage />,
+    "*": <Home />,
+  },
+  USER: {
+    "/": <Home />,
+    "/login": <Login page="login" />,
+    "/logon": <Login page="logon" />,
+    "*": <Home />,
+  },
 };
 
 export default function App() {
+  const [userAccessType, setUserAccessType] = useState(
+    localStorage.getItem("accessType") || "USER"
+  );
+
   return (
     <ThemeProvider theme={theme}>
       <BrowserRouter>
         <Routes>
-          {RouteWithNavbar("/", <Home />)}
-          {RouteWithNavbar("/login", <Login page="login" />)}
-          {RouteWithNavbar("/logon", <Login page="logon" />)}
-          {RouteWithNavbar("/dashboard/:path?/:id?", <DashboardPage />)}
-          {RouteWithNavbar("/comentarios/:id", <ComentariosPage />)}
-          {RouteWithNavbar("*", <Home />)}
+          {Object.entries(pages[userAccessType]).map(([path, element]) => {
+            const page = path.split("/")[1] || "home";
+            return (
+              <Route
+                key={path}
+                path={path}
+                element={
+                  <>
+                    <Navbar page={page} />
+                    {element}
+                  </>
+                }
+              />
+            );
+          })}
         </Routes>
       </BrowserRouter>
     </ThemeProvider>

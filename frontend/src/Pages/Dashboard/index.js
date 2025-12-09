@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { Box } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import Sidebar from "../../Components/Navigation/Sidebar";
 import PontosTuristicos from "./PontosTuristicos";
-import { Attractions, Dashboard, Star } from "@mui/icons-material";
-import ComentariosManager from "./PontosTuristicos/comentarios";
+import { Attractions, Dashboard } from "@mui/icons-material";
+import Profile from "./Profile";
 
 const routes = [
   {
@@ -28,7 +28,7 @@ export default function DashboardPage() {
   }, [path]);
 
   const pages = {
-    "": <div>Dashboard em desenvolvimento</div>,
+    "": <Profile />,
     "pontos-turisticos": <PontosTuristicos />,
   };
 

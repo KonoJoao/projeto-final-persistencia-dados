@@ -57,6 +57,7 @@ export default function Login({ page }) {
       const response = await axios.post(`${API_URL}/login`, loginForm);
 
       if (response.data.access_token) {
+        localStorage.setItem("accessType", response.data.role);
         localStorage.setItem("token", response.data.access_token);
         showSnackbar("Login realizado com sucesso!");
         setTimeout(() => {
@@ -80,10 +81,11 @@ export default function Login({ page }) {
       const response = await axios.post(`${API_URL}/register`, registerForm);
 
       if (response.data.access_token) {
+        localStorage.setItem("accessType", response.data.role);
         localStorage.setItem("token", response.data.access_token);
         showSnackbar("Cadastro realizado com sucesso!");
         setTimeout(() => {
-          navigate("/dashboard/pontos-turisticos");
+          navigate("/");
           setLoading(false);
         }, 1500);
       }

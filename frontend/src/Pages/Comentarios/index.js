@@ -30,7 +30,6 @@ const PONTOS_API_URL = "http://localhost:3001/pontos-turisticos";
 
 export default function ComentariosPage() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [pontoTuristico, setPontoTuristico] = useState(null);
   const [comentarios, setComentarios] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -56,7 +55,7 @@ export default function ComentariosPage() {
     try {
       setLoading(true);
       const [pontoResponse, comentariosResponse] = await Promise.all([
-        axios.get(`${PONTOS_API_URL}/${id}`),
+        axios.get(`${PONTOS_API_URL}?pontoId=${id}`),
         axios.get(`${API_URL}?pontoId=${id}`),
       ]);
       setPontoTuristico(pontoResponse.data);

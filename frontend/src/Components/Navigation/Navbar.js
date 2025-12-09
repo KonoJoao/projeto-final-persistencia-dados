@@ -8,14 +8,20 @@ import {
   IconButton,
 } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
+import Logo from "./logo.png";
 
 export default function Navbar({ page }) {
   const navigate = useNavigate();
-  const pages = [
-    { name: "Login", path: "/login" },
-    { name: "Dashboard", path: "/dashboard" },
-    { name: "Home", path: "/home" },
-  ];
+  const pages =
+    {
+      USER: [{ name: "Home", path: "/home" }],
+      ADMIN: [
+        { name: "Dashboard", path: "/dashboard" },
+        { name: "Home", path: "/home" },
+      ],
+    }[localStorage.getItem("accessType") || "USER"] || [];
+
+  const isLoggedIn = !!localStorage.getItem("token");
 
   return (
     <AppBar
@@ -34,18 +40,42 @@ export default function Navbar({ page }) {
           to="/"
           sx={{ color: "inherit", textDecoration: "none" }}
         >
-          Hospeda Nest
+          <img
+            src={Logo}
+            style={{
+              height: "38px",
+              marginLeft: "-36px",
+              marginTop: "10px",
+              borderRadius: "10px",
+            }}
+          />
         </Typography>
 
-        <Stack direction="row" spacing={2}>
+        <Stack direction="row" spacing={1}>
+          {isLoggedIn && (
+            <Button
+              variant="text"
+              color="inherit"
+              onClick={() => {
+                localStorage.clear();
+                navigate("/login");
+              }}
+            >
+              Sair
+            </Button>
+          )}
           {pages
-            .filter(({ name }) => name.toLowerCase() != page)
+            .filter(({ name }) => {
+              if (name === "Login" && isLoggedIn) return false;
+              return name.toLowerCase() !== page;
+            })
+            .reverse()
             .map((p, i) => (
               <Button
                 key={p.name}
-                variant={i == 1 ? "outlined" : "text"}
+                variant={i == 0 ? "outlined" : "text"}
                 sx={{
-                  border: i == 1 ? "1.5px solid #333" : "text",
+                  border: i == 0 ? "1.5px solid #333" : "text",
                 }}
                 color="inherit"
                 onClick={() => navigate(p.path)}

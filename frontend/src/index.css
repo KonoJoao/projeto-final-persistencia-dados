@@ -34,11 +34,20 @@ a {
   background-color: #0195f7 !important;
 }
 
-button:not(.MuiIconButton-root):not(.MuiCardActionArea-root) {
+button:not(.MuiIconButton-root):not(.MuiCardActionArea-root):not(
+    .MuiButton-containedSizeLarge
+  ) {
+  padding: 5px 20px !important;
+}
+a:not(.MuiIconButton-root):not(.MuiCardActionArea-root):not(
+    .MuiButton-containedSizeLarge
+  ) {
   padding: 5px 20px !important;
 }
 
-button:not(.MuiTab-root):not(.MuiCardActionArea-root),
-.MuiButtonBase-root {
+a:not(.MuiTab-root):not(.MuiCardActionArea-root) {
+  border-radius: 50px !important;
+}
+button:not(.MuiTab-root):not(.MuiCardActionArea-root) {
   border-radius: 50px !important;
 }
