@@ -112,7 +112,7 @@ export class PontoTuristicoService {
     });
 
     // Store in cache
-    await this.cacheManager.set(cacheKey, result);
+    await this.cacheManager.set(cacheKey, result, 60000);
 
     return result;
   }
@@ -143,7 +143,7 @@ export class PontoTuristicoService {
       throw new NotFoundException('Ponto turístico não encontrado');
     }
 
-    await this.cacheManager.set(cacheKey, ponto);
+    await this.cacheManager.set(cacheKey, ponto, 60000);
 
     return ponto;
   }
@@ -237,7 +237,7 @@ export class PontoTuristicoService {
     });
 
     // Store in cache
-    await this.cacheManager.set(cacheKey, result);
+    await this.cacheManager.set(cacheKey, result, 60000);
 
     return result;
   }
@@ -265,7 +265,7 @@ export class PontoTuristicoService {
     });
 
     // Store in cache
-    await this.cacheManager.set(cacheKey, result);
+    await this.cacheManager.set(cacheKey, result, 60000);
 
     return result;
   }
