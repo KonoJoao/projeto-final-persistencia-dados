@@ -33,7 +33,10 @@ import KeyvRedis from '@keyv/redis';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        uri: configService.get('MONGO_URI', 'mongodb://localhost:27017'),
+        uri: configService.get(
+          'MONGO_URI',
+          'mongodb://admin:admin@localhost:27017/turismo?authSource=admin',
+        ),
       }),
     }),
     MongooseModule.forFeature([
