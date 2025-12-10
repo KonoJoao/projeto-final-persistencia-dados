@@ -65,7 +65,7 @@ export default function Navbar({ page }) {
               >
                 Sair
               </Button>
-            ) : (
+            ) : !["login", "logon"].includes(page) ? (
               <Button
                 variant="contained"
                 color="primary"
@@ -77,7 +77,7 @@ export default function Navbar({ page }) {
               >
                 Acesse sua conta
               </Button>
-            )}
+            ) : null}
             {pages
               .filter(({ name }) => {
                 if (name === "Login" && isLoggedIn) return false;
