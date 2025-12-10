@@ -54,7 +54,7 @@ export default function Navbar({ page }) {
           </Typography>
 
           <Stack direction="row" spacing={1}>
-            {isLoggedIn && (
+            {isLoggedIn ? (
               <Button
                 variant="text"
                 color="inherit"
@@ -64,6 +64,18 @@ export default function Navbar({ page }) {
                 }}
               >
                 Sair
+              </Button>
+            ) : (
+              <Button
+                variant="contained"
+                color="primary"
+                disableElevation
+                onClick={() => {
+                  localStorage.clear();
+                  navigate("/login");
+                }}
+              >
+                Acesse sua conta
               </Button>
             )}
             {pages
